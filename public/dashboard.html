@@ -3,21 +3,26 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>KEO Hosting - لوحة التحكم</title>
+  <title>KEO-Hosting.com - لوحة التحكم</title>
   <script src="/socket.io/socket.io.js"></script>
   <style>
     :root {
-      --bg: #0b0d12;
-      --panel: #121620;
-      --panel-2: #181e2c;
-      --border: #252d3d;
-      --text: #eef2f7;
-      --muted: #8b95a8;
-      --accent: #4f8cff;
-      --accent-hover: #3b76eb;
-      --green: #22c55e;
-      --red: #ef4444;
-      --yellow: #eab308;
+      --bg-dark: #0f172a;
+      --panel-bg: #182235;
+      --panel-hover: #1f2b42;
+      --row-bg: #1e293b;
+      --row-hover: #26344b;
+      --border: #334155;
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+      --blue: #2563eb;
+      --blue-hover: #1d4ed8;
+      --gray-btn: #475569;
+      --gray-hover: #334155;
+      --red: #dc2626;
+      --red-hover: #b91c1c;
+      --green: #16a34a;
+      --editor-bg: #141b29;
     }
 
     * { box-sizing: border-box; }
@@ -25,71 +30,90 @@
     body {
       margin: 0;
       font-family: system-ui, -apple-system, sans-serif;
-      background: var(--bg);
+      background: var(--bg-dark);
       color: var(--text);
       min-height: 100vh;
     }
 
-    header {
-      background: var(--panel);
+    .top-brand {
+      background: #0b1120;
+      padding: 10px 16px;
       border-bottom: 1px solid var(--border);
-      padding: 14px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .brand-title {
+      font-weight: 700;
+      font-size: 16px;
+      color: #fff;
+      letter-spacing: 0.3px;
+    }
+
+    .top-meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .sub-nav {
+      background: var(--panel-bg);
+      border-bottom: 1px solid var(--border);
+      padding: 0 12px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      overflow-x: auto;
+    }
+
+    .nav-tab {
+      background: transparent;
+      color: var(--muted);
+      border: none;
+      border-bottom: 2px solid transparent;
+      border-radius: 0;
+      padding: 11px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .nav-tab.active {
+      color: #60a5fa;
+      border-bottom-color: #3b82f6;
+    }
+
+    .wrap {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 14px;
+    }
+
+    .server-switcher {
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-bottom: 14px;
       display: flex;
       flex-wrap: wrap;
-      gap: 12px;
+      gap: 8px;
       align-items: center;
       justify-content: space-between;
     }
 
-    .brand {
+    .power-bar {
       display: flex;
-      align-items: center;
-      gap: 10px;
-      font-weight: 700;
-      font-size: 18px;
-    }
-
-    .badge {
-      font-size: 12px;
-      padding: 3px 9px;
-      border-radius: 999px;
-      background: rgba(79, 140, 255, 0.16);
-      color: #9ec0ff;
-      border: 1px solid rgba(79, 140, 255, 0.35);
-    }
-
-    .user-bar {
-      display: flex;
+      gap: 8px;
       flex-wrap: wrap;
-      gap: 10px;
-      align-items: center;
-      font-size: 13px;
-      color: var(--muted);
-    }
-
-    .container {
-      max-width: 1280px;
-      margin: 0 auto;
-      padding: 20px;
-      display: grid;
-      grid-template-columns: 330px 1fr;
-      gap: 20px;
-    }
-
-    @media (max-width: 900px) {
-      .container { grid-template-columns: 1fr; }
-    }
-
-    .card {
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 16px;
-    }
-
-    h2, h3 {
-      margin: 0 0 12px;
-      font-size: 16px;
+      margin-bottom: 12px;
+      justify-content: flex-end;
     }
 
     button, input, select, textarea {
@@ -97,84 +121,239 @@
     }
 
     button {
-      cursor: pointer;
       border: none;
-      border-radius: 9px;
-      padding: 9px 14px;
+      border-radius: 6px;
+      padding: 8px 14px;
       font-size: 13px;
       font-weight: 600;
-      background: var(--accent);
       color: #fff;
-      transition: 0.15s;
-    }
-
-    button:hover { background: var(--accent-hover); }
-    button.secondary { background: var(--panel-2); color: var(--text); border: 1px solid var(--border); }
-    button.danger { background: var(--red); color: #fff; }
-    button.success { background: var(--green); color: #07130b; }
-    button.small { padding: 6px 10px; font-size: 12px; }
-
-    input, select, textarea {
-      width: 100%;
-      background: var(--panel-2);
-      color: var(--text);
-      border: 1px solid var(--border);
-      border-radius: 9px;
-      padding: 9px 11px;
-      font-size: 13px;
-    }
-
-    .stack { display: flex; flex-direction: column; gap: 10px; }
-    .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-
-    .server-item {
-      background: var(--panel-2);
-      border: 1px solid var(--border);
-      border-radius: 11px;
-      padding: 12px;
+      background: var(--blue);
       cursor: pointer;
       transition: 0.15s;
     }
 
-    .server-item.active {
-      border-color: var(--accent);
-      background: rgba(79, 140, 255, 0.08);
-    }
+    button:hover { background: var(--blue-hover); }
+    button.gray { background: var(--gray-btn); }
+    button.gray:hover { background: var(--gray-hover); }
+    button.red { background: var(--red); }
+    button.red:hover { background: var(--red-hover); }
+    button.green { background: var(--green); }
+    button.sm { padding: 6px 11px; font-size: 12px; }
 
-    .status-dot {
-      display: inline-block;
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      margin-left: 6px;
-    }
-
-    .online { background: var(--green); }
-    .offline { background: var(--red); }
-    .starting { background: var(--yellow); }
-
-    .tabs {
-      display: flex;
-      gap: 8px;
-      border-bottom: 1px solid var(--border);
-      padding-bottom: 10px;
-      margin-bottom: 14px;
-      flex-wrap: wrap;
-    }
-
-    .console-box {
-      background: #07090e;
+    input, select, textarea {
+      background: #0f172a;
+      color: var(--text);
       border: 1px solid var(--border);
-      border-radius: 10px;
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-size: 13px;
+    }
+
+    .console-screen {
+      background: #111827;
+      border: 1px solid var(--border);
+      border-radius: 8px;
       padding: 12px;
-      height: 320px;
+      height: 290px;
       overflow-y: auto;
       font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
       font-size: 12.5px;
-      line-height: 1.55;
+      line-height: 1.5;
       white-space: pre-wrap;
       direction: ltr;
       text-align: left;
+    }
+
+    .console-cmd {
+      margin-top: 8px;
+      display: flex;
+      gap: 8px;
+      direction: ltr;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    @media (max-width: 700px) {
+      .stats-grid { grid-template-columns: 1fr; }
+    }
+
+    .stat-box {
+      background: #334155;
+      border-radius: 6px;
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .stat-label { font-size: 11.5px; color: #cbd5e1; }
+    .stat-val { font-size: 14px; font-weight: 700; color: #fff; margin-top: 2px; }
+
+    /* Files Manager */
+    .files-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .breadcrumb {
+      font-size: 13px;
+      color: var(--muted);
+      direction: ltr;
+      text-align: left;
+    }
+
+    .breadcrumb span {
+      color: #e2e8f0;
+      font-weight: 600;
+    }
+
+    .file-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px;
+    }
+
+    .file-row {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--row-bg);
+      border-radius: 6px;
+      padding: 10px 12px;
+      transition: 0.12s;
+    }
+
+    .file-row:hover {
+      background: var(--row-hover);
+    }
+
+    .file-main {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      cursor: pointer;
+      direction: ltr;
+      text-align: left;
+      padding-left: 8px;
+    }
+
+    .file-name {
+      font-size: 13.5px;
+      font-weight: 500;
+      color: #f8fafc;
+      word-break: break-all;
+    }
+
+    .file-size {
+      font-size: 12px;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .dots-btn {
+      background: transparent;
+      color: #cbd5e1;
+      padding: 4px 8px;
+      font-size: 18px;
+      line-height: 1;
+      border-radius: 6px;
+    }
+
+    .dots-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .dots-menu {
+      position: absolute;
+      left: 10px;
+      top: 42px;
+      z-index: 40;
+      background: #0f172a;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      min-width: 155px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.45);
+      overflow: hidden;
+    }
+
+    .dots-menu button {
+      width: 100%;
+      text-align: right;
+      background: transparent;
+      color: var(--text);
+      border-radius: 0;
+      padding: 9px 12px;
+      font-size: 12.5px;
+      display: block;
+    }
+
+    .dots-menu button:hover {
+      background: #1e293b;
+    }
+
+    .dots-menu button.del-item {
+      color: #f87171;
+    }
+
+    /* File Editor View */
+    .editor-path {
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 9px 12px;
+      margin-bottom: 10px;
+      font-size: 13px;
+      color: #cbd5e1;
+      direction: ltr;
+      text-align: left;
+    }
+
+    .code-editor {
+      width: 100%;
+      min-height: 360px;
+      background: var(--editor-bg);
+      color: #e2e8f0;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 13px;
+      line-height: 1.55;
+      direction: ltr;
+      text-align: left;
+      resize: vertical;
+    }
+
+    .editor-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .panel-card {
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px;
+      margin-bottom: 12px;
     }
 
     table {
@@ -189,143 +368,184 @@
       text-align: right;
     }
 
-    th { color: var(--muted); font-weight: 600; }
-
-    .muted { color: var(--muted); font-size: 12.5px; }
+    th { color: var(--muted); }
+    .msg { font-size: 12.5px; color: #93c5fd; min-height: 18px; margin-top: 8px; }
     .hidden { display: none !important; }
-    .msg { font-size: 13px; min-height: 18px; color: #9ec0ff; }
   </style>
 </head>
 <body>
-  <header>
-    <div class="brand">
-      <span>KEO Hosting</span>
-      <span id="roleBadge" class="badge">...</span>
-    </div>
-    <div class="user-bar">
+  <div class="top-brand">
+    <div class="brand-title">KEO-Hosting.com</div>
+    <div class="top-meta">
       <span id="userInfo">جاري التحميل...</span>
-      <button class="secondary small" onclick="logout()">تسجيل الخروج</button>
+      <button class="gray sm" onclick="logout()">خروج</button>
     </div>
-  </header>
-
-  <div class="container">
-    <aside class="stack">
-      <div class="card">
-        <h2>إنشاء سيرفر بوت جديد</h2>
-        <form id="createServerForm" class="stack">
-          <input type="text" id="serverName" placeholder="اسم السيرفر (مثال: my-discord-bot)" required />
-          <input type="text" id="startupFile" placeholder="ملف التشغيل الرئيسي (افتراضي: index.js)" />
-          <button type="submit">إنشاء السيرفر</button>
-          <div id="createServerMsg" class="msg"></div>
-        </form>
-      </div>
-
-      <div class="card">
-        <div class="row" style="justify-content: space-between; margin-bottom: 10px;">
-          <h2 style="margin: 0;">سيرفراتي</h2>
-          <button id="toggleAllServersBtn" class="secondary small hidden" onclick="toggleAllServers()">عرض الكل</button>
-        </div>
-        <div id="serversList" class="stack"></div>
-      </div>
-    </aside>
-
-    <main class="stack">
-      <div class="card" id="workspaceCard">
-        <div id="noServerSelected" class="muted">اختر سيرفراً من القائمة الجانبية للتحكم به أو أنشئ سيرفراً جديداً.</div>
-
-        <div id="serverWorkspace" class="hidden">
-          <div class="row" style="justify-content: space-between; margin-bottom: 12px;">
-            <div>
-              <h2 id="activeServerTitle" style="margin: 0 0 4px;"></h2>
-              <div id="activeServerMeta" class="muted"></div>
-            </div>
-            <div class="row">
-              <button class="success small" onclick="powerAction('start')">تشغيل</button>
-              <button class="danger small" onclick="powerAction('stop')">إيقاف</button>
-            </div>
-          </div>
-
-          <div class="tabs">
-            <button class="secondary small" id="tabConsoleBtn" onclick="switchTab('console')">الكونسول (Console)</button>
-            <button class="secondary small" id="tabFilesBtn" onclick="switchTab('files')">الملفات (Files)</button>
-            <button class="secondary small hidden" id="tabUsersBtn" onclick="switchTab('users')">إدارة الأعضاء (Owner)</button>
-          </div>
-
-          <div id="tab-console">
-            <div id="consoleOutput" class="console-box"></div>
-            <form id="consoleCommandForm" class="row" style="margin-top: 10px;">
-              <input type="text" id="consoleInput" placeholder="أرسل أمراً للكونسول..." />
-              <button type="submit" class="small">إرسال</button>
-            </form>
-          </div>
-
-          <div id="tab-files" class="hidden">
-            <div class="row" style="justify-content: space-between; margin-bottom: 10px;">
-              <div id="storageInfo" class="muted"></div>
-              <form id="uploadFileForm" class="row">
-                <input type="file" id="fileInput" style="max-width: 220px;" />
-                <button type="submit" class="small">رفع ملف</button>
-              </form>
-            </div>
-
-            <div class="row" style="margin-bottom: 12px;">
-              <input type="text" id="newFileName" placeholder="اسم ملف جديد أو تعديل ملف (مثال: index.js أو config.json)" style="max-width: 340px;" />
-              <button class="secondary small" onclick="loadSelectedFile()">فتح الملف</button>
-              <button class="small" onclick="saveCurrentFile()">حفظ الملف</button>
-              <button class="danger small" onclick="deleteCurrentFile()">حذف الملف</button>
-            </div>
-
-            <textarea id="fileEditor" rows="14" placeholder="محتوى الملف سيظهر هنا..." style="direction: ltr; text-align: left; font-family: ui-monospace, monospace;"></textarea>
-            <div id="filesMsg" class="msg" style="margin-top: 8px;"></div>
-          </div>
-
-          <div id="tab-users" class="hidden">
-            <h3>إضافة عضو جديد</h3>
-            <form id="addUserForm" class="row" style="margin-bottom: 16px;">
-              <input type="text" id="newUsername" placeholder="اسم المستخدم" style="max-width: 160px;" required />
-              <input type="password" id="newPassword" placeholder="كلمة السر" style="max-width: 160px;" required />
-              <select id="newRole" style="max-width: 130px;">
-                <option value="member">member</option>
-                <option value="owner">owner</option>
-              </select>
-              <input type="number" id="newStorage" placeholder="المساحة MB" value="5120" style="max-width: 130px;" />
-              <input type="number" id="newCpu" placeholder="CPU %" value="150" style="max-width: 110px;" />
-              <button type="submit" class="small">إضافة</button>
-            </form>
-
-            <h3>الأعضاء وتخصيص الموارد (الحد الأقصى: سيرفران لكل شخص)</h3>
-            <div style="overflow-x: auto;">
-              <table>
-                <thead>
-                  <tr>
-                    <th>العضو</th>
-                    <th>الرتبة</th>
-                    <th>حد السيرفرات</th>
-                    <th>المساحة (MB)</th>
-                    <th>CPU (%)</th>
-                    <th>حفظ</th>
-                  </tr>
-                </thead>
-                <tbody id="usersTableBody"></tbody>
-              </table>
-            </div>
-            <div id="usersMsg" class="msg" style="margin-top: 8px;"></div>
-          </div>
-        </div>
-      </div>
-    </main>
   </div>
-<script>
+
+  <nav class="sub-nav">
+    <button class="nav-tab active" id="navConsole" onclick="switchSection('console')">Console</button>
+    <button class="nav-tab" id="navFiles" onclick="switchSection('files')">Files</button>
+    <button class="nav-tab hidden" id="navUsers" onclick="switchSection('users')">Users</button>
+  </nav>
+
+  <div class="wrap">
+    <div class="server-switcher">
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; flex:1;">
+        <select id="serverSelect" onchange="onServerChange()" style="max-width:260px;"></select>
+        <button class="gray sm" id="toggleAllBtn" class="hidden" onclick="toggleAllServers()">عرض الكل</button>
+      </div>
+      <form id="createServerForm" style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+        <input type="text" id="newServerName" placeholder="اسم سيرفر جديد..." style="width:165px;" required />
+        <input type="text" id="newStartupFile" placeholder="index.js" style="width:105px;" />
+        <button type="submit" class="sm">إنشاء سيرفر</button>
+      </form>
+    </div>
+    <div id="createServerMsg" class="msg" style="margin-bottom:8px;"></div>
+
+    <!-- Console Section -->
+    <section id="sec-console">
+      <div class="power-bar">
+        <button class="sm" onclick="powerAction('start')">Start</button>
+        <button class="gray sm" onclick="powerAction('restart')">Restart</button>
+        <button class="red sm" onclick="powerAction('stop')">Stop</button>
+      </div>
+
+      <div id="consoleOutput" class="console-screen"></div>
+
+      <form id="consoleForm" class="console-cmd">
+        <input type="text" id="consoleInput" placeholder="> Type a command..." />
+        <button type="submit" class="sm">Send</button>
+      </form>
+
+      <div class="stats-grid">
+        <div class="stat-box">
+          <div>📡</div>
+          <div>
+            <div class="stat-label">Status</div>
+            <div id="statStatus" class="stat-val">offline</div>
+          </div>
+        </div>
+        <div class="stat-box">
+          <div>⏱️</div>
+          <div>
+            <div class="stat-label">Startup File</div>
+            <div id="statStartup" class="stat-val">index.js</div>
+          </div>
+        </div>
+        <div class="stat-box">
+          <div>⚡</div>
+          <div>
+            <div class="stat-label">CPU Limit</div>
+            <div id="statCpu" class="stat-val">150%</div>
+          </div>
+        </div>
+        <div class="stat-box">
+          <div>🧠</div>
+          <div>
+            <div class="stat-label">Memory / Disk</div>
+            <div id="statStorage" class="stat-val">0 / 5120 MB</div>
+          </div>
+        </div>
+        <div class="stat-box">
+          <div>📁</div>
+          <div>
+            <div class="stat-label">Server ID</div>
+            <div id="statId" class="stat-val">-</div>
+          </div>
+        </div>
+        <div class="stat-box">
+          <div>👤</div>
+          <div>
+            <div class="stat-label">Owner</div>
+            <div id="statOwner" class="stat-val">-</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Files Section -->
+    <section id="sec-files" class="hidden">
+      <div id="filesBrowserView">
+        <div class="files-toolbar">
+          <div class="breadcrumb">/home / <span>container</span> <span id="storageBadge"></span></div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="sm" onclick="promptNewFile()">إنشاء ملف</button>
+            <button class="gray sm" onclick="triggerUploadFile()">رفع ملف</button>
+            <input type="file" id="uploadFileInput" class="hidden" onchange="handleFileUpload(event)" />
+          </div>
+        </div>
+
+        <div id="fileListContainer" class="file-list"></div>
+        <div id="filesMsg" class="msg"></div>
+      </div>
+
+      <div id="fileEditorView" class="hidden">
+        <div id="editorFilePath" class="editor-path">/home / container / index.js</div>
+        <textarea id="codeEditorArea" class="code-editor" spellcheck="false" placeholder="اكتب الكود هنا..."></textarea>
+        <div class="editor-actions">
+          <button onclick="saveOpenedFile()">حفظ</button>
+          <button class="gray" onclick="backToFilesHome()">الرجوع</button>
+          <span id="editorMsg" class="msg" style="margin:0;"></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Users Section (Owner) -->
+    <section id="sec-users" class="hidden">
+      <div class="panel-card">
+        <h3 style="margin:0 0 10px;">إضافة عضو جديد</h3>
+        <form id="addUserForm" style="display:flex; gap:8px; flex-wrap:wrap;">
+          <input type="text" id="uName" placeholder="اسم المستخدم" style="width:150px;" required />
+          <input type="password" id="uPass" placeholder="كلمة السر" style="width:150px;" required />
+          <select id="uRole" style="width:120px;">
+            <option value="member">member</option>
+            <option value="owner">owner</option>
+          </select>
+          <input type="number" id="uStorage" value="5120" placeholder="MB" style="width:110px;" />
+          <input type="number" id="uCpu" value="150" placeholder="CPU %" style="width:100px;" />
+          <button type="submit" class="sm">إضافة</button>
+        </form>
+        <div id="usersMsg" class="msg"></div>
+      </div>
+
+      <div class="panel-card" style="overflow-x:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>العضو</th>
+              <th>الرتبة</th>
+              <th>حد السيرفرات</th>
+              <th>المساحة (MB)</th>
+              <th>CPU (%)</th>
+              <th>حفظ</th>
+            </tr>
+          </thead>
+          <tbody id="usersTbody"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+  <script>
     const socket = io();
     let currentUser = null;
     let servers = [];
     let activeServerId = null;
-    let showAllServers = false;
+    let showAll = false;
+    let currentFiles = [];
+    let openedFileName = null;
+    let openMenuFile = null;
 
-    async function api(url, options = {}) {
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.file-row')) {
+        openMenuFile = null;
+        renderFileList();
+      }
+    });
+
+    async function api(url, opts = {}) {
       const res = await fetch(url, {
-        headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
-        ...options
+        headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) },
+        ...opts
       });
       if (res.status === 401) {
         window.location.href = '/login';
@@ -335,117 +555,116 @@
     }
 
     async function init() {
-      const meRes = await api('/api/me');
-      if (!meRes) return;
-      const meData = await meRes.json();
-      currentUser = meData.user;
+      const res = await api('/api/me');
+      if (!res) return;
+      const data = await res.json();
+      currentUser = data.user;
 
-      document.getElementById('roleBadge').textContent = currentUser.role.toUpperCase();
       document.getElementById('userInfo').textContent =
-        `${currentUser.username} | المساحة: ${currentUser.allocatedStorageMB} MB | CPU: ${currentUser.allocatedCpu}% | السيرفرات: ${meData.serversCount}/${currentUser.maxServers}`;
+        `${currentUser.username} (${currentUser.role}) • ${currentUser.allocatedStorageMB}MB • ${currentUser.allocatedCpu}%`;
 
       if (currentUser.role === 'owner') {
-        document.getElementById('toggleAllServersBtn').classList.remove('hidden');
-        document.getElementById('tabUsersBtn').classList.remove('hidden');
+        document.getElementById('toggleAllBtn').classList.remove('hidden');
+        document.getElementById('navUsers').classList.remove('hidden');
       }
 
       await loadServers();
     }
 
     async function loadServers() {
-      const q = currentUser.role === 'owner' && showAllServers ? '?all=1' : '';
+      const q = currentUser.role === 'owner' && showAll ? '?all=1' : '';
       const res = await api(`/api/servers${q}`);
       if (!res) return;
       const data = await res.json();
       servers = data.servers || [];
-      renderServers();
+      renderServerDropdown();
 
       if (!activeServerId && servers.length > 0) {
         selectServer(servers[0]._id);
       } else if (activeServerId) {
-        const stillExists = servers.find(s => s._id === activeServerId);
-        if (stillExists) updateActiveServerHeader(stillExists);
+        const cur = servers.find(s => s._id === activeServerId);
+        if (cur) updateStats(cur);
       }
+    }
+
+    function renderServerDropdown() {
+      const sel = document.getElementById('serverSelect');
+      if (!servers.length) {
+        sel.innerHTML = '<option value="">لا توجد سيرفرات</option>';
+        return;
+      }
+      sel.innerHTML = servers.map(s =>
+        `<option value="${s._id}" ${s._id === activeServerId ? 'selected' : ''}>${escapeHtml(s.name)} (${s.status})</option>`
+      ).join('');
+    }
+
+    function onServerChange() {
+      const id = document.getElementById('serverSelect').value;
+      if (id) selectServer(id);
     }
 
     function toggleAllServers() {
-      showAllServers = !showAllServers;
-      document.getElementById('toggleAllServersBtn').textContent = showAllServers ? 'سيرفراتي فقط' : 'عرض الكل';
+      showAll = !showAll;
+      document.getElementById('toggleAllBtn').textContent = showAll ? 'سيرفراتي' : 'عرض الكل';
       loadServers();
-    }
-
-    function renderServers() {
-      const list = document.getElementById('serversList');
-      if (!servers.length) {
-        list.innerHTML = '<div class="muted">لا توجد سيرفرات بعد.</div>';
-        return;
-      }
-
-      list.innerHTML = servers.map(s => `
-        <div class="server-item ${s._id === activeServerId ? 'active' : ''}" onclick="selectServer('${s._id}')">
-          <div style="font-weight: 700;">
-            <span class="status-dot ${s.status}"></span>${escapeHtml(s.name)}
-          </div>
-          <div class="muted" style="margin-top: 4px;">
-            الحالة: ${s.status} | الملف: ${escapeHtml(s.startupFile)}
-            ${s.owner?.username ? ` | المالك: ${escapeHtml(s.owner.username)}` : ''}
-          </div>
-        </div>
-      `).join('');
-    }
-
-    function updateActiveServerHeader(srv) {
-      document.getElementById('activeServerTitle').textContent = srv.name;
-      document.getElementById('activeServerMeta').textContent =
-        `الحالة: ${srv.status} | المساحة: ${srv.storageLimitMB} MB | CPU: ${srv.cpuLimit}% | ملف التشغيل: ${srv.startupFile}`;
     }
 
     async function selectServer(id) {
       activeServerId = id;
-      renderServers();
-      const srv = servers.find(s => s._id === id);
-      if (!srv) return;
+      openedFileName = null;
+      document.getElementById('fileEditorView').classList.add('hidden');
+      document.getElementById('filesBrowserView').classList.remove('hidden');
+      renderServerDropdown();
 
-      document.getElementById('noServerSelected').classList.add('hidden');
-      document.getElementById('serverWorkspace').classList.remove('hidden');
-      updateActiveServerHeader(srv);
+      const srv = servers.find(s => s._id === id);
+      if (srv) updateStats(srv);
 
       document.getElementById('consoleOutput').textContent = '';
       socket.emit('join_server', id);
       await loadFiles();
     }
 
-    function switchTab(tab) {
-      ['console', 'files', 'users'].forEach(t => {
-        document.getElementById(`tab-${t}`).classList.toggle('hidden', t !== tab);
+    function updateStats(srv) {
+      document.getElementById('statStatus').textContent = srv.status || 'offline';
+      document.getElementById('statStartup').textContent = srv.startupFile || 'index.js';
+      document.getElementById('statCpu').textContent = `${srv.cpuLimit || 150}%`;
+      document.getElementById('statId').textContent = String(srv._id || '').slice(-8);
+      document.getElementById('statOwner').textContent = srv.owner?.username || currentUser.username;
+    }
+
+    function switchSection(sec) {
+      ['console', 'files', 'users'].forEach(name => {
+        document.getElementById(`sec-${name}`).classList.toggle('hidden', name !== sec);
+        const tab = document.getElementById(`nav${name.charAt(0).toUpperCase() + name.slice(1)}`);
+        if (tab) tab.classList.toggle('active', name === sec);
       });
-      if (tab === 'files') loadFiles();
-      if (tab === 'users' && currentUser.role === 'owner') loadUsers();
+      if (sec === 'files') {
+        backToFilesHome();
+        loadFiles();
+      }
+      if (sec === 'users' && currentUser.role === 'owner') {
+        loadUsers();
+      }
     }
 
     document.getElementById('createServerForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const msg = document.getElementById('createServerMsg');
-      msg.textContent = 'جاري الإنشاء...';
-
-      const name = document.getElementById('serverName').value.trim();
-      const startupFile = document.getElementById('startupFile').value.trim() || 'index.js';
-
+      const name = document.getElementById('newServerName').value.trim();
+      const startupFile = document.getElementById('newStartupFile').value.trim() || 'index.js';
       const res = await api('/api/servers', {
         method: 'POST',
         body: JSON.stringify({ name, startupFile })
       });
       if (!res) return;
       const data = await res.json();
-
       if (!res.ok) {
-        msg.textContent = data.error || 'فشل الإنشاء';
+        msg.textContent = data.error || 'تعذر إنشاء السيرفر';
         return;
       }
-
-      msg.textContent = 'تم إنشاء السيرفر بنجاح';
-      document.getElementById('serverName').value = '';
-      document.getElementById('startupFile').value = '';
+      msg.textContent = 'تم إنشاء السيرفر';
+      document.getElementById('newServerName').value = '';
+      document.getElementById('newStartupFile').value = '';
       await loadServers();
       if (data.server?._id) selectServer(data.server._id);
     });
@@ -459,13 +678,13 @@
       await loadServers();
     }
 
-    document.getElementById('consoleCommandForm').addEventListener('submit', (e) => {
+    document.getElementById('consoleForm').addEventListener('submit', (e) => {
       e.preventDefault();
-      const input = document.getElementById('consoleInput');
-      const command = input.value.trim();
-      if (!command || !activeServerId) return;
-      socket.emit('console_command', { serverId: activeServerId, command });
-      input.value = '';
+      const inp = document.getElementById('consoleInput');
+      const cmd = inp.value.trim();
+      if (!cmd || !activeServerId) return;
+      socket.emit('console_command', { serverId: activeServerId, command: cmd });
+      inp.value = '';
     });
 
     socket.on('console_output', ({ serverId, line }) => {
@@ -486,142 +705,241 @@
       const res = await api(`/api/servers/${activeServerId}/files`);
       if (!res) return;
       const data = await res.json();
-      document.getElementById('storageInfo').textContent =
-        `المساحة المستخدمة: ${data.usedStorageMB} MB من أصل ${data.limitStorageMB} MB (${(data.files || []).length} ملف)`;
+      currentFiles = data.files || [];
+      document.getElementById('storageBadge').textContent =
+        `• ${data.usedStorageMB ?? 0} / ${data.limitStorageMB ?? 5120} MB`;
+      document.getElementById('statStorage').textContent =
+        `${data.usedStorageMB ?? 0} / ${data.limitStorageMB ?? 5120} MB`;
+      renderFileList();
     }
 
-    async function loadSelectedFile() {
-      const msg = document.getElementById('filesMsg');
-      const fileName = document.getElementById('newFileName').value.trim();
-      if (!activeServerId || !fileName) return;
+    function formatBytes(bytes) {
+      const n = Number(bytes || 0);
+      if (n < 1024) return `${n} B`;
+      if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KiB`;
+      return `${(n / (1024 * 1024)).toFixed(2)} MiB`;
+    }
+
+    function renderFileList() {
+      const box = document.getElementById('fileListContainer');
+      if (!currentFiles.length) {
+        box.innerHTML = '<div style="padding:14px; color:#94a3b8; font-size:13px;">لا توجد ملفات بعد. اضغط "إنشاء ملف" أو "رفع ملف".</div>';
+        return;
+      }
+
+      box.innerHTML = currentFiles.map(f => {
+        const name = f.fileName || f.name;
+        const size = f.size ?? BufferSizeFallback(f.content);
+        const isOpenMenu = openMenuFile === name;
+        return `
+          <div class="file-row">
+            <div class="file-main" onclick="openFileInEditor('${escapeAttr(name)}')">
+              <span class="file-name">📄 ${escapeHtml(name)}</span>
+              <span class="file-size">${formatBytes(size)}</span>
+            </div>
+            <button type="button" class="dots-btn" onclick="toggleDotsMenu(event, '${escapeAttr(name)}')">⋮</button>
+            ${isOpenMenu ? `
+              <div class="dots-menu">
+                <button type="button" onclick="renameFile('${escapeAttr(name)}')">✏️ تغيير الاسم</button>
+                <button type="button" onclick="downloadFile('${escapeAttr(name)}')">⬇️ تنزيل</button>
+                <button type="button" onclick="archiveFile('${escapeAttr(name)}')">📦 أرشفة</button>
+                <button type="button" class="del-item" onclick="deleteFileByName('${escapeAttr(name)}')">🗑️ حذف</button>
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function BufferSizeFallback(content) {
+      return new Blob([content || '']).size;
+    }
+
+    function toggleDotsMenu(e, fileName) {
+      e.stopPropagation();
+      openMenuFile = openMenuFile === fileName ? null : fileName;
+      renderFileList();
+    }
+
+    async function openFileInEditor(fileName) {
+      openMenuFile = null;
+      renderFileList();
+      openedFileName = fileName;
+
+      document.getElementById('editorFilePath').textContent = `/home / container / ${fileName}`;
+      document.getElementById('codeEditorArea').value = 'جاري تحميل الملف...';
+      document.getElementById('editorMsg').textContent = '';
+
+      document.getElementById('filesBrowserView').classList.add('hidden');
+      document.getElementById('fileEditorView').classList.remove('hidden');
 
       const res = await api(`/api/servers/${activeServerId}/files/content?name=${encodeURIComponent(fileName)}`);
       if (!res) return;
       const data = await res.json();
-      if (!res.ok) {
-        msg.textContent = data.error || 'تعذر فتح الملف';
-        return;
-      }
-      document.getElementById('fileEditor').value = data.content || '';
-      msg.textContent = `تم فتح ${data.fileName}`;
+      document.getElementById('codeEditorArea').value = res.ok ? (data.content || '') : '';
+      if (!res.ok) document.getElementById('editorMsg').textContent = data.error || 'ملف جديد';
     }
 
-    async function saveCurrentFile() {
-      const msg = document.getElementById('filesMsg');
-      const fileName = document.getElementById('newFileName').value.trim();
-      const content = document.getElementById('fileEditor').value;
-      if (!activeServerId || !fileName) {
-        msg.textContent = 'اكتب اسم الملف أولاً';
-        return;
-      }
+    async function saveOpenedFile() {
+      if (!activeServerId || !openedFileName) return;
+      const content = document.getElementById('codeEditorArea').value;
+      const msg = document.getElementById('editorMsg');
+      msg.textContent = 'جاري الحفظ...';
 
       const res = await api(`/api/servers/${activeServerId}/files/save`, {
         method: 'POST',
-        body: JSON.stringify({ fileName, content })
+        body: JSON.stringify({ fileName: openedFileName, content })
       });
       if (!res) return;
       const data = await res.json();
-      msg.textContent = res.ok ? `تم حفظ ${fileName}` : (data.error || 'فشل الحفظ');
+      msg.textContent = res.ok ? 'تم حفظ الملف بنجاح' : (data.error || 'فشل الحفظ');
       await loadFiles();
     }
 
-    async function deleteCurrentFile() {
+    function backToFilesHome() {
+      openedFileName = null;
+      document.getElementById('fileEditorView').classList.add('hidden');
+      document.getElementById('filesBrowserView').classList.remove('hidden');
+      loadFiles();
+    }
+
+    async function promptNewFile() {
+      if (!activeServerId) return;
+      const name = prompt('اكتب اسم الملف الجديد (مثال: index.js أو config.json):');
+      if (!name || !name.trim()) return;
+      const cleanName = name.trim();
+      const res = await api(`/api/servers/${activeServerId}/files/save`, {
+        method: 'POST',
+        body: JSON.stringify({ fileName: cleanName, content: '' })
+      });
+      if (!res) return;
+      await loadFiles();
+      openFileInEditor(cleanName);
+    }
+
+    function triggerUploadFile() {
+      if (!activeServerId) return;
+      document.getElementById('uploadFileInput').click();
+    }
+
+    async function handleFileUpload(e) {
+      const file = e.target.files?.[0];
+      if (!file || !activeServerId) return;
       const msg = document.getElementById('filesMsg');
-      const fileName = document.getElementById('newFileName').value.trim();
-      if (!activeServerId || !fileName) return;
+      msg.textContent = 'جاري رفع الملف...';
+
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await fetch(`/api/servers/${activeServerId}/files/upload`, {
+        method: 'POST',
+        body: fd
+      });
+      e.target.value = '';
+      if (res.status === 401) return (window.location.href = '/login');
+      const data = await res.json();
+      msg.textContent = res.ok ? `تم رفع ${file.name}` : (data.error || 'فشل الرفع');
+      await loadFiles();
+    }
+
+    async function renameFile(oldName) {
+      openMenuFile = null;
+      const newName = prompt(`تغيير اسم الملف (${oldName}) إلى:`, oldName);
+      if (!newName || !newName.trim() || newName.trim() === oldName) return renderFileList();
+
+      const res = await api(`/api/servers/${activeServerId}/files/rename`, {
+        method: 'POST',
+        body: JSON.stringify({ oldName, newName: newName.trim() })
+      });
+      if (!res) return;
+      const data = await res.json();
+      document.getElementById('filesMsg').textContent = res.ok ? 'تم تغيير الاسم' : (data.error || 'تعذر تغيير الاسم');
+      await loadFiles();
+    }
+
+    function downloadFile(fileName) {
+      openMenuFile = null;
+      renderFileList();
+      window.location.href = `/api/servers/${activeServerId}/files/download?name=${encodeURIComponent(fileName)}`;
+    }
+
+    async function archiveFile(fileName) {
+      openMenuFile = null;
+      const res = await api(`/api/servers/${activeServerId}/files/archive`, {
+        method: 'POST',
+        body: JSON.stringify({ fileName })
+      });
+      if (!res) return;
+      const data = await res.json();
+      document.getElementById('filesMsg').textContent = res.ok ? (data.message || 'تمت أرشفة الملف') : (data.error || 'تعذرت الأرشفة');
+      await loadFiles();
+    }
+
+    async function deleteFileByName(fileName) {
+      openMenuFile = null;
+      if (!confirm(`هل أنت متأكد من حذف ${fileName}؟`)) return renderFileList();
 
       const res = await api(`/api/servers/${activeServerId}/files?name=${encodeURIComponent(fileName)}`, {
         method: 'DELETE'
       });
       if (!res) return;
       const data = await res.json();
-      if (res.ok) {
-        document.getElementById('fileEditor').value = '';
-        msg.textContent = `تم حذف ${fileName}`;
-        await loadFiles();
-      } else {
-        msg.textContent = data.error || 'تعذر الحذف';
-      }
-    }
-
-    document.getElementById('uploadFileForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const msg = document.getElementById('filesMsg');
-      const input = document.getElementById('fileInput');
-      if (!activeServerId || !input.files.length) return;
-
-      const formData = new FormData();
-      formData.append('file', input.files[0]);
-
-      const res = await fetch(`/api/servers/${activeServerId}/files/upload`, {
-        method: 'POST',
-        body: formData
-      });
-      if (res.status === 401) return (window.location.href = '/login');
-      const data = await res.json();
-      msg.textContent = res.ok ? `تم رفع ${data.fileName}` : (data.error || 'فشل الرفع');
-      input.value = '';
+      document.getElementById('filesMsg').textContent = res.ok ? `تم حذف ${fileName}` : (data.error || 'تعذر الحذف');
       await loadFiles();
-    });
+    }
 
     async function loadUsers() {
       const res = await api('/api/users');
       if (!res) return;
       const data = await res.json();
-      const tbody = document.getElementById('usersTableBody');
-
+      const tbody = document.getElementById('usersTbody');
       tbody.innerHTML = (data.users || []).map(u => `
         <tr>
           <td>${escapeHtml(u.username)}</td>
           <td>${u.role}</td>
-          <td><input type="number" min="1" max="2" id="srv_${u._id}" value="${u.maxServers}" style="width: 70px;" /></td>
-          <td><input type="number" min="256" step="256" id="st_${u._id}" value="${u.allocatedStorageMB}" style="width: 100px;" /></td>
-          <td><input type="number" min="10" max="1000" id="cpu_${u._id}" value="${u.allocatedCpu}" style="width: 85px;" /></td>
-          <td><button class="small" onclick="saveUserAlloc('${u._id}')">حفظ</button></td>
+          <td><input type="number" min="1" max="2" id="srv_${u._id}" value="${u.maxServers}" style="width:65px;" /></td>
+          <td><input type="number" min="256" step="256" id="st_${u._id}" value="${u.allocatedStorageMB}" style="width:95px;" /></td>
+          <td><input type="number" min="10" max="1000" id="cpu_${u._id}" value="${u.allocatedCpu}" style="width:80px;" /></td>
+          <td><button class="sm" onclick="saveUserAlloc('${u._id}')">حفظ</button></td>
         </tr>
       `).join('');
     }
 
     async function saveUserAlloc(userId) {
-      const msg = document.getElementById('usersMsg');
-      const maxServers = Number(document.getElementById(`srv_${userId}`).value);
-      const allocatedStorageMB = Number(document.getElementById(`st_${userId}`).value);
-      const allocatedCpu = Number(document.getElementById(`cpu_${userId}`).value);
-
       const res = await api(`/api/users/${userId}/allocations`, {
         method: 'PATCH',
-        body: JSON.stringify({ maxServers, allocatedStorageMB, allocatedCpu })
+        body: JSON.stringify({
+          maxServers: Number(document.getElementById(`srv_${userId}`).value),
+          allocatedStorageMB: Number(document.getElementById(`st_${userId}`).value),
+          allocatedCpu: Number(document.getElementById(`cpu_${userId}`).value)
+        })
       });
       if (!res) return;
       const data = await res.json();
-      msg.textContent = res.ok ? `تم تحديث موارد ${data.user.username}` : (data.error || 'فشل التحديث');
+      document.getElementById('usersMsg').textContent = res.ok ? `تم تحديث ${data.user.username}` : (data.error || 'فشل التحديث');
       await loadServers();
     }
 
     document.getElementById('addUserForm').addEventListener('submit', async (e) => {
       e.preventDefault();
-      const msg = document.getElementById('usersMsg');
-      const payload = {
-        username: document.getElementById('newUsername').value.trim(),
-        password: document.getElementById('newPassword').value,
-        role: document.getElementById('newRole').value,
-        allocatedStorageMB: Number(document.getElementById('newStorage').value || 5120),
-        allocatedCpu: Number(document.getElementById('newCpu').value || 150),
-        maxServers: 2
-      };
-
       const res = await api('/api/users', {
         method: 'POST',
-        body: JSON.stringify(payload)
+        body: JSON.stringify({
+          username: document.getElementById('uName').value.trim(),
+          password: document.getElementById('uPass').value,
+          role: document.getElementById('uRole').value,
+          allocatedStorageMB: Number(document.getElementById('uStorage').value || 5120),
+          allocatedCpu: Number(document.getElementById('uCpu').value || 150),
+          maxServers: 2
+        })
       });
       if (!res) return;
       const data = await res.json();
       if (res.ok) {
-        msg.textContent = `تمت إضافة ${data.user.username}`;
+        document.getElementById('usersMsg').textContent = `تمت إضافة ${data.user.username}`;
         document.getElementById('addUserForm').reset();
-        await loadUsers();
+        loadUsers();
       } else {
-        msg.textContent = data.error || 'تعذر الإضافة';
+        document.getElementById('usersMsg').textContent = data.error || 'تعذر الإضافة';
       }
     });
 
@@ -630,12 +948,12 @@
       window.location.href = '/login';
     }
 
-    function escapeHtml(str) {
-      return String(str || '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
+    function escapeHtml(s) {
+      return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function escapeAttr(s) {
+      return escapeHtml(s).replace(/'/g, '&#39;');
     }
 
     init();
