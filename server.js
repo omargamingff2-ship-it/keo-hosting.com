@@ -6,6 +6,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
 const multer = require('multer');
+const AdmZip = require('adm-zip');
 const { Server: SocketServer } = require('socket.io');
 
 const User = require('./models/User');
@@ -16,7 +17,8 @@ const {
   safeFileName,
   startBotServer,
   stopBotServer,
-  sendConsoleInput
+  sendConsoleInput,
+  getRuntimeInfo
 } = require('./utils/processManager');
 
 const app = express();
@@ -26,9 +28,13 @@ const io = new SocketServer(httpServer);
 const PORT = process.env.PORT || 3000;
 const MONGO_URI = process.env.MONGO_URI;
 
-app.use(express.json({ limit: '5mb' }));
+app.use(express.json({ limit: '10mb' }));
 app.use(cookieParser());
 app.disable('x-powered-by');
+
+function decodeUploadName(originalname) {
+  return Buffer.from(String(originalname || 'file'), 'latin1').toString('utf8');
+}
 
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'login.html'));
@@ -98,7 +104,12 @@ app.get('/api/servers', requireAuth, async (req, res) => {
     : { owner: req.user._id };
 
   const servers = await Server.find(query).populate('owner', 'username role').sort({ createdAt: -1 });
-  res.json({ servers });
+  const enriched = servers.map((s) => {
+    const obj = s.toObject();
+    obj.runtime = getRuntimeInfo(s._id);
+    return obj;
+  });
+  res.json({ servers: enriched });
 });
 
 app.post('/api/servers', requireAuth, async (req, res) => {
@@ -236,7 +247,6 @@ app.post('/api/servers/:id/files/save', requireAuth, async (req, res) => {
     res.status(400).json({ error: err.message || 'تعذر حفظ الملف' });
   }
 });
-
 app.post('/api/servers/:id/files/rename', requireAuth, async (req, res) => {
   try {
     const check = await getAuthorizedServer(req.params.id, req.user);
@@ -284,7 +294,7 @@ app.get('/api/servers/:id/files/download', requireAuth, async (req, res) => {
     if (!file) return res.status(404).json({ error: 'الملف غير موجود' });
 
     res.setHeader('Content-Type', 'application/octet-stream');
-    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(file.fileName)}"`);
+    res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(file.fileName)}`);
     return res.send(Buffer.from(file.content || '', 'utf8'));
   } catch (err) {
     res.status(400).json({ error: err.message || 'تعذر تنزيل الملف' });
@@ -302,7 +312,8 @@ app.post('/api/servers/:id/files/archive', requireAuth, async (req, res) => {
       return res.status(404).json({ error: 'الملف غير موجود للأرشفة' });
     }
 
-    const archiveName = safeFileName(`archive_${fileName}.bak`);
+    const baseName = path.basename(fileName);
+    const archiveName = safeFileName(`archive_${baseName}.bak`);
     const content = sourceFile.content || '';
     const bytes = Buffer.byteLength(content, 'utf8');
 
@@ -336,7 +347,36 @@ app.post('/api/servers/:id/files/upload', requireAuth, upload.single('file'), as
     if (check.error) return res.status(check.code).json({ error: check.error });
     if (!req.file) return res.status(400).json({ error: 'لم يتم اختيار ملف' });
 
-    const fileName = safeFileName(req.file.originalname);
+    const decodedName = decodeUploadName(req.file.originalname);
+
+    if (decodedName.toLowerCase().endsWith('.zip')) {
+      const zip = new AdmZip(req.file.buffer);
+      const entries = zip.getEntries();
+      let extractedCount = 0;
+
+      for (const entry of entries) {
+        if (entry.isDirectory) continue;
+        const entryName = safeFileName(entry.entryName);
+        const entryContent = entry.getData().toString('utf8');
+        const entryBytes = Buffer.byteLength(entryContent, 'utf8');
+
+        await ServerFile.findOneAndUpdate(
+          { serverId: check.server._id, fileName: entryName },
+          { content: entryContent, sizeBytes: entryBytes, updatedAt: new Date() },
+          { upsert: true, new: true }
+        );
+        extractedCount++;
+      }
+
+      return res.json({
+        success: true,
+        fileName: decodedName,
+        extractedCount,
+        message: `تم فك ضغط ${extractedCount} ملفاً من ${decodedName}`
+      });
+    }
+
+    const fileName = safeFileName(decodedName);
     const content = req.file.buffer.toString('utf8');
     const newBytes = req.file.size;
 
@@ -356,7 +396,7 @@ app.post('/api/servers/:id/files/upload', requireAuth, upload.single('file'), as
       { upsert: true, new: true }
     );
 
-    res.json({ success: true, fileName });
+    res.json({ success: true, fileName, message: `تم رفع ${fileName}` });
   } catch (err) {
     res.status(400).json({ error: err.message || 'فشل رفع الملف' });
   }
