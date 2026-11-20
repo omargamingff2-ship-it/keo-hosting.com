@@ -162,6 +162,10 @@ app.post('/api/servers/:id/power', requireAuth, async (req, res) => {
     await startBotServer(check.server, io);
   } else if (action === 'stop') {
     await stopBotServer(check.server._id, io);
+  } else if (action === 'restart') {
+    await stopBotServer(check.server._id, io);
+    const refreshed = await Server.findById(check.server._id);
+    if (refreshed) await startBotServer(refreshed, io);
   } else {
     return res.status(400).json({ error: 'أمر غير صالح' });
   }
@@ -230,6 +234,97 @@ app.post('/api/servers/:id/files/save', requireAuth, async (req, res) => {
     res.json({ success: true, file: { fileName: saved.fileName, sizeBytes: saved.sizeBytes } });
   } catch (err) {
     res.status(400).json({ error: err.message || 'تعذر حفظ الملف' });
+  }
+});
+
+app.post('/api/servers/:id/files/rename', requireAuth, async (req, res) => {
+  try {
+    const check = await getAuthorizedServer(req.params.id, req.user);
+    if (check.error) return res.status(check.code).json({ error: check.error });
+
+    const oldName = safeFileName(req.body?.oldName);
+    const newName = safeFileName(req.body?.newName);
+
+    if (oldName === newName) {
+      return res.json({ success: true, fileName: newName });
+    }
+
+    const sourceFile = await ServerFile.findOne({ serverId: check.server._id, fileName: oldName });
+    if (!sourceFile) {
+      return res.status(404).json({ error: 'الملف الأصلي غير موجود' });
+    }
+
+    const targetExists = await ServerFile.findOne({ serverId: check.server._id, fileName: newName });
+    if (targetExists) {
+      return res.status(400).json({ error: 'يوجد ملف آخر بهذا الاسم بالفعل' });
+    }
+
+    sourceFile.fileName = newName;
+    sourceFile.updatedAt = new Date();
+    await sourceFile.save();
+
+    if (check.server.startupFile === oldName) {
+      check.server.startupFile = newName;
+      await check.server.save();
+    }
+
+    res.json({ success: true, fileName: newName });
+  } catch (err) {
+    res.status(400).json({ error: err.message || 'تعذر تغيير اسم الملف' });
+  }
+});
+
+app.get('/api/servers/:id/files/download', requireAuth, async (req, res) => {
+  try {
+    const check = await getAuthorizedServer(req.params.id, req.user);
+    if (check.error) return res.status(check.code).json({ error: check.error });
+
+    const fileName = safeFileName(req.query.name);
+    const file = await ServerFile.findOne({ serverId: check.server._id, fileName });
+    if (!file) return res.status(404).json({ error: 'الملف غير موجود' });
+
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(file.fileName)}"`);
+    return res.send(Buffer.from(file.content || '', 'utf8'));
+  } catch (err) {
+    res.status(400).json({ error: err.message || 'تعذر تنزيل الملف' });
+  }
+});
+
+app.post('/api/servers/:id/files/archive', requireAuth, async (req, res) => {
+  try {
+    const check = await getAuthorizedServer(req.params.id, req.user);
+    if (check.error) return res.status(check.code).json({ error: check.error });
+
+    const fileName = safeFileName(req.body?.fileName);
+    const sourceFile = await ServerFile.findOne({ serverId: check.server._id, fileName });
+    if (!sourceFile) {
+      return res.status(404).json({ error: 'الملف غير موجود للأرشفة' });
+    }
+
+    const archiveName = safeFileName(`archive_${fileName}.bak`);
+    const content = sourceFile.content || '';
+    const bytes = Buffer.byteLength(content, 'utf8');
+
+    const existingFiles = await ServerFile.find({ serverId: check.server._id });
+    const otherBytes = existingFiles
+      .filter((f) => f.fileName !== archiveName)
+      .reduce((sum, f) => sum + (f.sizeBytes || 0), 0);
+
+    const maxBytes = check.server.storageLimitMB * 1024 * 1024;
+    if (otherBytes + bytes > maxBytes) {
+      return res.status(400).json({ error: 'المساحة المتبقية لا تكفي لأرشفة الملف' });
+    }
+
+    await ServerFile.findOneAndUpdate(
+      { serverId: check.server._id, fileName: archiveName },
+      { content, sizeBytes: bytes, updatedAt: new Date() },
+      { upsert: true, new: true }
+    );
+
+    res.json({ success: true, archiveName, message: `تمت الأرشفة باسم ${archiveName}` });
+  } catch (err) {
+    res.status(400).json({ error: err.message || 'تعذرت أرشفة الملف' });
   }
 });
 
