@@ -9,7 +9,6 @@
     :root {
       --bg-dark: #0f172a;
       --panel-bg: #182235;
-      --panel-hover: #1f2b42;
       --row-bg: #1e293b;
       --row-hover: #26344b;
       --border: #334155;
@@ -21,7 +20,6 @@
       --gray-hover: #334155;
       --red: #dc2626;
       --red-hover: #b91c1c;
-      --green: #16a34a;
       --editor-bg: #141b29;
     }
 
@@ -50,7 +48,6 @@
       font-weight: 700;
       font-size: 16px;
       color: #fff;
-      letter-spacing: 0.3px;
     }
 
     .top-meta {
@@ -116,9 +113,7 @@
       justify-content: flex-end;
     }
 
-    button, input, select, textarea {
-      font-family: inherit;
-    }
+    button, input, select, textarea { font-family: inherit; }
 
     button {
       border: none;
@@ -137,7 +132,6 @@
     button.gray:hover { background: var(--gray-hover); }
     button.red { background: var(--red); }
     button.red:hover { background: var(--red-hover); }
-    button.green { background: var(--green); }
     button.sm { padding: 6px 11px; font-size: 12px; }
 
     input, select, textarea {
@@ -210,10 +204,7 @@
       text-align: left;
     }
 
-    .breadcrumb span {
-      color: #e2e8f0;
-      font-weight: 600;
-    }
+    .breadcrumb span { color: #e2e8f0; font-weight: 600; }
 
     .file-list {
       display: flex;
@@ -236,9 +227,7 @@
       transition: 0.12s;
     }
 
-    .file-row:hover {
-      background: var(--row-hover);
-    }
+    .file-row:hover { background: var(--row-hover); }
 
     .file-main {
       flex: 1;
@@ -274,9 +263,7 @@
       border-radius: 6px;
     }
 
-    .dots-btn:hover {
-      background: rgba(255, 255, 255, 0.08);
-    }
+    .dots-btn:hover { background: rgba(255, 255, 255, 0.08); }
 
     .dots-menu {
       position: absolute;
@@ -302,13 +289,8 @@
       display: block;
     }
 
-    .dots-menu button:hover {
-      background: #1e293b;
-    }
-
-    .dots-menu button.del-item {
-      color: #f87171;
-    }
+    .dots-menu button:hover { background: #1e293b; }
+    .dots-menu button.del-item { color: #f87171; }
 
     .editor-path {
       background: var(--panel-bg);
@@ -354,18 +336,8 @@
       margin-bottom: 12px;
     }
 
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 13px;
-    }
-
-    th, td {
-      padding: 9px 8px;
-      border-bottom: 1px solid var(--border);
-      text-align: right;
-    }
-
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { padding: 9px 8px; border-bottom: 1px solid var(--border); text-align: right; }
     th { color: var(--muted); }
     .msg { font-size: 12.5px; color: #93c5fd; min-height: 18px; margin-top: 8px; }
     .hidden { display: none !important; }
@@ -425,8 +397,8 @@
         <div class="stat-box">
           <div>⏱️</div>
           <div>
-            <div class="stat-label">Startup File</div>
-            <div id="statStartup" class="stat-val">index.js</div>
+            <div class="stat-label">Uptime</div>
+            <div id="statUptime" class="stat-val">0s</div>
           </div>
         </div>
         <div class="stat-box">
@@ -446,8 +418,8 @@
         <div class="stat-box">
           <div>📁</div>
           <div>
-            <div class="stat-label">Server ID</div>
-            <div id="statId" class="stat-val">-</div>
+            <div class="stat-label">Startup File</div>
+            <div id="statStartup" class="stat-val">index.js</div>
           </div>
         </div>
         <div class="stat-box">
@@ -529,6 +501,25 @@
     let currentFiles = [];
     let openedFileName = null;
     let openMenuFile = null;
+    let uptimeSec = 0;
+
+    setInterval(() => {
+      const st = document.getElementById('statStatus').textContent;
+      if (st === 'running' || st === 'online') {
+        uptimeSec++;
+        document.getElementById('statUptime').textContent = formatDuration(uptimeSec);
+      }
+    }, 1000);
+
+    function formatDuration(sec) {
+      const s = Math.max(0, Number(sec || 0));
+      const h = Math.floor(s / 3600);
+      const m = Math.floor((s % 3600) / 60);
+      const r = s % 60;
+      if (h > 0) return `${h}h ${m}m ${r}s`;
+      if (m > 0) return `${m}m ${r}s`;
+      return `${r}s`;
+    }
 
     document.addEventListener('click', (e) => {
       if (!e.target.closest('.file-row')) {
@@ -612,7 +603,10 @@
       renderServerDropdown();
 
       const srv = servers.find(s => s._id === id);
-      if (srv) updateStats(srv);
+      if (srv) {
+        uptimeSec = srv.runtime?.uptimeSec || 0;
+        updateStats(srv);
+      }
 
       document.getElementById('consoleOutput').textContent = '';
       socket.emit('join_server', id);
@@ -623,8 +617,11 @@
       document.getElementById('statStatus').textContent = srv.status || 'offline';
       document.getElementById('statStartup').textContent = srv.startupFile || 'index.js';
       document.getElementById('statCpu').textContent = `${srv.cpuLimit || 150}%`;
-      document.getElementById('statId').textContent = String(srv._id || '').slice(-8);
       document.getElementById('statOwner').textContent = srv.owner?.username || currentUser.username;
+      if (srv.runtime?.uptimeSec !== undefined) {
+        uptimeSec = srv.runtime.uptimeSec;
+      }
+      document.getElementById('statUptime').textContent = formatDuration(uptimeSec);
     }
 
     function switchSection(sec) {
@@ -672,10 +669,11 @@
 
     async function powerAction(action) {
       if (!activeServerId) {
-        appendConsoleLine('[SYSTEM] اختر سيرفراً أولاً.\n');
+        appendConsoleLine('[KEO SYSTEM] اختر سيرفراً أولاً.\n');
         return;
       }
-      appendConsoleLine(`[SYSTEM] إرسال أمر ${action}...\n`);
+      if (action === 'start') uptimeSec = 0;
+      appendConsoleLine(`[KEO SYSTEM] إرسال أمر ${action}...\n`);
       const res = await api(`/api/servers/${activeServerId}/power`, {
         method: 'POST',
         body: JSON.stringify({ action })
@@ -683,7 +681,7 @@
       if (!res) return;
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        appendConsoleLine(`[ERROR] ${data.error || 'فشل تنفيذ الأمر'}\n`);
+        appendConsoleLine(`[KEO ERROR] ${data.error || 'فشل تنفيذ الأمر'}\n`);
       }
       await loadServers();
     }
@@ -707,7 +705,11 @@
       appendConsoleLine(line);
     });
 
-    socket.on('server_status', async ({ serverId }) => {
+    socket.on('server_status', async ({ serverId, status }) => {
+      if (serverId === activeServerId && (status === 'offline' || status === 'starting')) {
+        uptimeSec = 0;
+        document.getElementById('statUptime').textContent = '0s';
+      }
       if (serverId === activeServerId || servers.some(s => s._id === serverId)) {
         await loadServers();
       }
@@ -742,12 +744,13 @@
 
       box.innerHTML = currentFiles.map(f => {
         const name = f.fileName || f.name;
-        const size = f.sizeBytes ?? f.size ?? BufferSizeFallback(f.content);
+        const size = f.sizeBytes ?? f.size ?? 0;
         const isOpenMenu = openMenuFile === name;
+        const icon = name.includes('/') ? '📂' : '📄';
         return `
           <div class="file-row">
             <div class="file-main" onclick="openFileInEditor('${escapeAttr(name)}')">
-              <span class="file-name">📄 ${escapeHtml(name)}</span>
+              <span class="file-name">${icon} ${escapeHtml(name)}</span>
               <span class="file-size">${formatBytes(size)}</span>
             </div>
             <button type="button" class="dots-btn" onclick="toggleDotsMenu(event, '${escapeAttr(name)}')">⋮</button>
@@ -762,10 +765,6 @@
           </div>
         `;
       }).join('');
-    }
-
-    function BufferSizeFallback(content) {
-      return new Blob([content || '']).size;
     }
 
     function toggleDotsMenu(e, fileName) {
@@ -818,7 +817,7 @@
 
     async function promptNewFile() {
       if (!activeServerId) return;
-      const name = prompt('اكتب اسم الملف الجديد (مثال: index.js أو config.json):');
+      const name = prompt('اكتب اسم الملف الجديد (مثال: index.js أو src/bot.js):');
       if (!name || !name.trim()) return;
       const cleanName = name.trim();
       const res = await api(`/api/servers/${activeServerId}/files/save`, {
@@ -850,7 +849,7 @@
       e.target.value = '';
       if (res.status === 401) return (window.location.href = '/login');
       const data = await res.json();
-      msg.textContent = res.ok ? `تم رفع ${file.name}` : (data.error || 'فشل الرفع');
+      msg.textContent = res.ok ? (data.message || `تم رفع ${file.name}`) : (data.error || 'فشل الرفع');
       await loadFiles();
     }
 
@@ -867,6 +866,7 @@
       const data = await res.json();
       document.getElementById('filesMsg').textContent = res.ok ? 'تم تغيير الاسم' : (data.error || 'تعذر تغيير الاسم');
       await loadFiles();
+      await loadServers();
     }
 
     function downloadFile(fileName) {
