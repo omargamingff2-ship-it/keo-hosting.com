@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KEO Hosting - لوحة التحكم</title>
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    :root {
+      --bg: #0b0d12;
+      --panel: #121620;
+      --panel-2: #181e2c;
+      --border: #252d3d;
+      --text: #eef2f7;
+      --muted: #8b95a8;
+      --accent: #4f8cff;
+      --accent-hover: #3b76eb;
+      --green: #22c55e;
+      --red: #ef4444;
+      --yellow: #eab308;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    header {
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 20px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 18px;
+    }
+
+    .badge {
+      font-size: 12px;
+      padding: 3px 9px;
+      border-radius: 999px;
+      background: rgba(79, 140, 255, 0.16);
+      color: #9ec0ff;
+      border: 1px solid rgba(79, 140, 255, 0.35);
+    }
+
+    .user-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .container {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 20px;
+      display: grid;
+      grid-template-columns: 330px 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 900px) {
+      .container { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+    }
+
+    h2, h3 {
+      margin: 0 0 12px;
+      font-size: 16px;
+    }
+
+    button, input, select, textarea {
+      font-family: inherit;
+    }
+
+    button {
+      cursor: pointer;
+      border: none;
+      border-radius: 9px;
+      padding: 9px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      background: var(--accent);
+      color: #fff;
+      transition: 0.15s;
+    }
+
+    button:hover { background: var(--accent-hover); }
+    button.secondary { background: var(--panel-2); color: var(--text); border: 1px solid var(--border); }
+    button.danger { background: var(--red); color: #fff; }
+    button.success { background: var(--green); color: #07130b; }
+    button.small { padding: 6px 10px; font-size: 12px; }
+
+    input, select, textarea {
+      width: 100%;
+      background: var(--panel-2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: 9px 11px;
+      font-size: 13px;
+    }
+
+    .stack { display: flex; flex-direction: column; gap: 10px; }
+    .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+    .server-item {
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 11px;
+      padding: 12px;
+      cursor: pointer;
+      transition: 0.15s;
+    }
+
+    .server-item.active {
+      border-color: var(--accent);
+      background: rgba(79, 140, 255, 0.08);
+    }
+
+    .status-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-left: 6px;
+    }
+
+    .online { background: var(--green); }
+    .offline { background: var(--red); }
+    .starting { background: var(--yellow); }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 10px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    .console-box {
+      background: #07090e;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      height: 320px;
+      overflow-y: auto;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 12.5px;
+      line-height: 1.55;
+      white-space: pre-wrap;
+      direction: ltr;
+      text-align: left;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    th, td {
+      padding: 9px 8px;
+      border-bottom: 1px solid var(--border);
+      text-align: right;
+    }
+
+    th { color: var(--muted); font-weight: 600; }
+
+    .muted { color: var(--muted); font-size: 12.5px; }
+    .hidden { display: none !important; }
+    .msg { font-size: 13px; min-height: 18px; color: #9ec0ff; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <span>KEO Hosting</span>
+      <span id="roleBadge" class="badge">...</span>
+    </div>
+    <div class="user-bar">
+      <span id="userInfo">جاري التحميل...</span>
+      <button class="secondary small" onclick="logout()">تسجيل الخروج</button>
+    </div>
+  </header>
+
+  <div class="container">
+    <aside class="stack">
+      <div class="card">
+        <h2>إنشاء سيرفر بوت جديد</h2>
+        <form id="createServerForm" class="stack">
+          <input type="text" id="serverName" placeholder="اسم السيرفر (مثال: my-discord-bot)" required />
+          <input type="text" id="startupFile" placeholder="ملف التشغيل الرئيسي (افتراضي: index.js)" />
+          <button type="submit">إنشاء السيرفر</button>
+          <div id="createServerMsg" class="msg"></div>
+        </form>
+      </div>
+
+      <div class="card">
+        <div class="row" style="justify-content: space-between; margin-bottom: 10px;">
+          <h2 style="margin: 0;">سيرفراتي</h2>
+          <button id="toggleAllServersBtn" class="secondary small hidden" onclick="toggleAllServers()">عرض الكل</button>
+        </div>
+        <div id="serversList" class="stack"></div>
+      </div>
+    </aside>
+
+    <main class="stack">
+      <div class="card" id="workspaceCard">
+        <div id="noServerSelected" class="muted">اختر سيرفراً من القائمة الجانبية للتحكم به أو أنشئ سيرفراً جديداً.</div>
+
+        <div id="serverWorkspace" class="hidden">
+          <div class="row" style="justify-content: space-between; margin-bottom: 12px;">
+            <div>
+              <h2 id="activeServerTitle" style="margin: 0 0 4px;"></h2>
+              <div id="activeServerMeta" class="muted"></div>
+            </div>
+            <div class="row">
+              <button class="success small" onclick="powerAction('start')">تشغيل</button>
+              <button class="danger small" onclick="powerAction('stop')">إيقاف</button>
+            </div>
+          </div>
+
+          <div class="tabs">
+            <button class="secondary small" id="tabConsoleBtn" onclick="switchTab('console')">الكونسول (Console)</button>
+            <button class="secondary small" id="tabFilesBtn" onclick="switchTab('files')">الملفات (Files)</button>
+            <button class="secondary small hidden" id="tabUsersBtn" onclick="switchTab('users')">إدارة الأعضاء (Owner)</button>
+          </div>
+
+          <div id="tab-console">
+            <div id="consoleOutput" class="console-box"></div>
+            <form id="consoleCommandForm" class="row" style="margin-top: 10px;">
+              <input type="text" id="consoleInput" placeholder="أرسل أمراً للكونسول..." />
+              <button type="submit" class="small">إرسال</button>
+            </form>
+          </div>
+
+          <div id="tab-files" class="hidden">
+            <div class="row" style="justify-content: space-between; margin-bottom: 10px;">
+              <div id="storageInfo" class="muted"></div>
+              <form id="uploadFileForm" class="row">
+                <input type="file" id="fileInput" style="max-width: 220px;" />
+                <button type="submit" class="small">رفع ملف</button>
+              </form>
+            </div>
+
+            <div class="row" style="margin-bottom: 12px;">
+              <input type="text" id="newFileName" placeholder="اسم ملف جديد أو تعديل ملف (مثال: index.js أو config.json)" style="max-width: 340px;" />
+              <button class="secondary small" onclick="loadSelectedFile()">فتح الملف</button>
+              <button class="small" onclick="saveCurrentFile()">حفظ الملف</button>
+              <button class="danger small" onclick="deleteCurrentFile()">حذف الملف</button>
+            </div>
+
+            <textarea id="fileEditor" rows="14" placeholder="محتوى الملف سيظهر هنا..." style="direction: ltr; text-align: left; font-family: ui-monospace, monospace;"></textarea>
+            <div id="filesMsg" class="msg" style="margin-top: 8px;"></div>
+          </div>
+
+          <div id="tab-users" class="hidden">
+            <h3>إضافة عضو جديد</h3>
+            <form id="addUserForm" class="row" style="margin-bottom: 16px;">
+              <input type="text" id="newUsername" placeholder="اسم المستخدم" style="max-width: 160px;" required />
+              <input type="password" id="newPassword" placeholder="كلمة السر" style="max-width: 160px;" required />
+              <select id="newRole" style="max-width: 130px;">
+                <option value="member">member</option>
+                <option value="owner">owner</option>
+              </select>
+              <input type="number" id="newStorage" placeholder="المساحة MB" value="5120" style="max-width: 130px;" />
+              <input type="number" id="newCpu" placeholder="CPU %" value="150" style="max-width: 110px;" />
+              <button type="submit" class="small">إضافة</button>
+            </form>
+
+            <h3>الأعضاء وتخصيص الموارد (الحد الأقصى: سيرفران لكل شخص)</h3>
+            <div style="overflow-x: auto;">
+              <table>
+                <thead>
+                  <tr>
+                    <th>العضو</th>
+                    <th>الرتبة</th>
+                    <th>حد السيرفرات</th>
+                    <th>المساحة (MB)</th>
+                    <th>CPU (%)</th>
+                    <th>حفظ</th>
+                  </tr>
+                </thead>
+                <tbody id="usersTableBody"></tbody>
+              </table>
+            </div>
+            <div id="usersMsg" class="msg" style="margin-top: 8px;"></div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+<script>
+    const socket = io();
+    let currentUser = null;
+    let servers = [];
+    let activeServerId = null;
+    let showAllServers = false;
+
+    async function api(url, options = {}) {
+      const res = await fetch(url, {
+        headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+        ...options
+      });
+      if (res.status === 401) {
+        window.location.href = '/login';
+        return null;
+      }
+      return res;
+    }
+
+    async function init() {
+      const meRes = await api('/api/me');
+      if (!meRes) return;
+      const meData = await meRes.json();
+      currentUser = meData.user;
+
+      document.getElementById('roleBadge').textContent = currentUser.role.toUpperCase();
+      document.getElementById('userInfo').textContent =
+        `${currentUser.username} | المساحة: ${currentUser.allocatedStorageMB} MB | CPU: ${currentUser.allocatedCpu}% | السيرفرات: ${meData.serversCount}/${currentUser.maxServers}`;
+
+      if (currentUser.role === 'owner') {
+        document.getElementById('toggleAllServersBtn').classList.remove('hidden');
+        document.getElementById('tabUsersBtn').classList.remove('hidden');
+      }
+
+      await loadServers();
+    }
+
+    async function loadServers() {
+      const q = currentUser.role === 'owner' && showAllServers ? '?all=1' : '';
+      const res = await api(`/api/servers${q}`);
+      if (!res) return;
+      const data = await res.json();
+      servers = data.servers || [];
+      renderServers();
+
+      if (!activeServerId && servers.length > 0) {
+        selectServer(servers[0]._id);
+      } else if (activeServerId) {
+        const stillExists = servers.find(s => s._id === activeServerId);
+        if (stillExists) updateActiveServerHeader(stillExists);
+      }
+    }
+
+    function toggleAllServers() {
+      showAllServers = !showAllServers;
+      document.getElementById('toggleAllServersBtn').textContent = showAllServers ? 'سيرفراتي فقط' : 'عرض الكل';
+      loadServers();
+    }
+
+    function renderServers() {
+      const list = document.getElementById('serversList');
+      if (!servers.length) {
+        list.innerHTML = '<div class="muted">لا توجد سيرفرات بعد.</div>';
+        return;
+      }
+
+      list.innerHTML = servers.map(s => `
+        <div class="server-item ${s._id === activeServerId ? 'active' : ''}" onclick="selectServer('${s._id}')">
+          <div style="font-weight: 700;">
+            <span class="status-dot ${s.status}"></span>${escapeHtml(s.name)}
+          </div>
+          <div class="muted" style="margin-top: 4px;">
+            الحالة: ${s.status} | الملف: ${escapeHtml(s.startupFile)}
+            ${s.owner?.username ? ` | المالك: ${escapeHtml(s.owner.username)}` : ''}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function updateActiveServerHeader(srv) {
+      document.getElementById('activeServerTitle').textContent = srv.name;
+      document.getElementById('activeServerMeta').textContent =
+        `الحالة: ${srv.status} | المساحة: ${srv.storageLimitMB} MB | CPU: ${srv.cpuLimit}% | ملف التشغيل: ${srv.startupFile}`;
+    }
+
+    async function selectServer(id) {
+      activeServerId = id;
+      renderServers();
+      const srv = servers.find(s => s._id === id);
+      if (!srv) return;
+
+      document.getElementById('noServerSelected').classList.add('hidden');
+      document.getElementById('serverWorkspace').classList.remove('hidden');
+      updateActiveServerHeader(srv);
+
+      document.getElementById('consoleOutput').textContent = '';
+      socket.emit('join_server', id);
+      await loadFiles();
+    }
+
+    function switchTab(tab) {
+      ['console', 'files', 'users'].forEach(t => {
+        document.getElementById(`tab-${t}`).classList.toggle('hidden', t !== tab);
+      });
+      if (tab === 'files') loadFiles();
+      if (tab === 'users' && currentUser.role === 'owner') loadUsers();
+    }
+
+    document.getElementById('createServerForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const msg = document.getElementById('createServerMsg');
+      msg.textContent = 'جاري الإنشاء...';
+
+      const name = document.getElementById('serverName').value.trim();
+      const startupFile = document.getElementById('startupFile').value.trim() || 'index.js';
+
+      const res = await api('/api/servers', {
+        method: 'POST',
+        body: JSON.stringify({ name, startupFile })
+      });
+      if (!res) return;
+      const data = await res.json();
+
+      if (!res.ok) {
+        msg.textContent = data.error || 'فشل الإنشاء';
+        return;
+      }
+
+      msg.textContent = 'تم إنشاء السيرفر بنجاح';
+      document.getElementById('serverName').value = '';
+      document.getElementById('startupFile').value = '';
+      await loadServers();
+      if (data.server?._id) selectServer(data.server._id);
+    });
+
+    async function powerAction(action) {
+      if (!activeServerId) return;
+      await api(`/api/servers/${activeServerId}/power`, {
+        method: 'POST',
+        body: JSON.stringify({ action })
+      });
+      await loadServers();
+    }
+
+    document.getElementById('consoleCommandForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const input = document.getElementById('consoleInput');
+      const command = input.value.trim();
+      if (!command || !activeServerId) return;
+      socket.emit('console_command', { serverId: activeServerId, command });
+      input.value = '';
+    });
+
+    socket.on('console_output', ({ serverId, line }) => {
+      if (serverId !== activeServerId) return;
+      const out = document.getElementById('consoleOutput');
+      out.textContent += line;
+      out.scrollTop = out.scrollHeight;
+    });
+
+    socket.on('server_status', async ({ serverId }) => {
+      if (serverId === activeServerId || servers.some(s => s._id === serverId)) {
+        await loadServers();
+      }
+    });
+
+    async function loadFiles() {
+      if (!activeServerId) return;
+      const res = await api(`/api/servers/${activeServerId}/files`);
+      if (!res) return;
+      const data = await res.json();
+      document.getElementById('storageInfo').textContent =
+        `المساحة المستخدمة: ${data.usedStorageMB} MB من أصل ${data.limitStorageMB} MB (${(data.files || []).length} ملف)`;
+    }
+
+    async function loadSelectedFile() {
+      const msg = document.getElementById('filesMsg');
+      const fileName = document.getElementById('newFileName').value.trim();
+      if (!activeServerId || !fileName) return;
+
+      const res = await api(`/api/servers/${activeServerId}/files/content?name=${encodeURIComponent(fileName)}`);
+      if (!res) return;
+      const data = await res.json();
+      if (!res.ok) {
+        msg.textContent = data.error || 'تعذر فتح الملف';
+        return;
+      }
+      document.getElementById('fileEditor').value = data.content || '';
+      msg.textContent = `تم فتح ${data.fileName}`;
+    }
+
+    async function saveCurrentFile() {
+      const msg = document.getElementById('filesMsg');
+      const fileName = document.getElementById('newFileName').value.trim();
+      const content = document.getElementById('fileEditor').value;
+      if (!activeServerId || !fileName) {
+        msg.textContent = 'اكتب اسم الملف أولاً';
+        return;
+      }
+
+      const res = await api(`/api/servers/${activeServerId}/files/save`, {
+        method: 'POST',
+        body: JSON.stringify({ fileName, content })
+      });
+      if (!res) return;
+      const data = await res.json();
+      msg.textContent = res.ok ? `تم حفظ ${fileName}` : (data.error || 'فشل الحفظ');
+      await loadFiles();
+    }
+
+    async function deleteCurrentFile() {
+      const msg = document.getElementById('filesMsg');
+      const fileName = document.getElementById('newFileName').value.trim();
+      if (!activeServerId || !fileName) return;
+
+      const res = await api(`/api/servers/${activeServerId}/files?name=${encodeURIComponent(fileName)}`, {
+        method: 'DELETE'
+      });
+      if (!res) return;
+      const data = await res.json();
+      if (res.ok) {
+        document.getElementById('fileEditor').value = '';
+        msg.textContent = `تم حذف ${fileName}`;
+        await loadFiles();
+      } else {
+        msg.textContent = data.error || 'تعذر الحذف';
+      }
+    }
+
+    document.getElementById('uploadFileForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const msg = document.getElementById('filesMsg');
+      const input = document.getElementById('fileInput');
+      if (!activeServerId || !input.files.length) return;
+
+      const formData = new FormData();
+      formData.append('file', input.files[0]);
+
+      const res = await fetch(`/api/servers/${activeServerId}/files/upload`, {
+        method: 'POST',
+        body: formData
+      });
+      if (res.status === 401) return (window.location.href = '/login');
+      const data = await res.json();
+      msg.textContent = res.ok ? `تم رفع ${data.fileName}` : (data.error || 'فشل الرفع');
+      input.value = '';
+      await loadFiles();
+    });
+
+    async function loadUsers() {
+      const res = await api('/api/users');
+      if (!res) return;
+      const data = await res.json();
+      const tbody = document.getElementById('usersTableBody');
+
+      tbody.innerHTML = (data.users || []).map(u => `
+        <tr>
+          <td>${escapeHtml(u.username)}</td>
+          <td>${u.role}</td>
+          <td><input type="number" min="1" max="2" id="srv_${u._id}" value="${u.maxServers}" style="width: 70px;" /></td>
+          <td><input type="number" min="256" step="256" id="st_${u._id}" value="${u.allocatedStorageMB}" style="width: 100px;" /></td>
+          <td><input type="number" min="10" max="1000" id="cpu_${u._id}" value="${u.allocatedCpu}" style="width: 85px;" /></td>
+          <td><button class="small" onclick="saveUserAlloc('${u._id}')">حفظ</button></td>
+        </tr>
+      `).join('');
+    }
+
+    async function saveUserAlloc(userId) {
+      const msg = document.getElementById('usersMsg');
+      const maxServers = Number(document.getElementById(`srv_${userId}`).value);
+      const allocatedStorageMB = Number(document.getElementById(`st_${userId}`).value);
+      const allocatedCpu = Number(document.getElementById(`cpu_${userId}`).value);
+
+      const res = await api(`/api/users/${userId}/allocations`, {
+        method: 'PATCH',
+        body: JSON.stringify({ maxServers, allocatedStorageMB, allocatedCpu })
+      });
+      if (!res) return;
+      const data = await res.json();
+      msg.textContent = res.ok ? `تم تحديث موارد ${data.user.username}` : (data.error || 'فشل التحديث');
+      await loadServers();
+    }
+
+    document.getElementById('addUserForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const msg = document.getElementById('usersMsg');
+      const payload = {
+        username: document.getElementById('newUsername').value.trim(),
+        password: document.getElementById('newPassword').value,
+        role: document.getElementById('newRole').value,
+        allocatedStorageMB: Number(document.getElementById('newStorage').value || 5120),
+        allocatedCpu: Number(document.getElementById('newCpu').value || 150),
+        maxServers: 2
+      };
+
+      const res = await api('/api/users', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+      if (!res) return;
+      const data = await res.json();
+      if (res.ok) {
+        msg.textContent = `تمت إضافة ${data.user.username}`;
+        document.getElementById('addUserForm').reset();
+        await loadUsers();
+      } else {
+        msg.textContent = data.error || 'تعذر الإضافة';
+      }
+    });
+
+    async function logout() {
+      await api('/api/logout', { method: 'POST' });
+      window.location.href = '/login';
+    }
+
+    function escapeHtml(str) {
+      return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    init();
+  </script>
+</body>
+</html>
