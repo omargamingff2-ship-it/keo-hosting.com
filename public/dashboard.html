@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>KEO-Hosting.com - لوحة التحكم</title>
   <script src="/socket.io/socket.io.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.6/ace.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.6/ext-modelist.min.js"></script>
   <style>
     :root {
       --bg-dark: #0f172a;
@@ -20,7 +22,6 @@
       --gray-hover: #334155;
       --red: #dc2626;
       --red-hover: #b91c1c;
-      --editor-bg: #141b29;
     }
 
     * { box-sizing: border-box; }
@@ -44,19 +45,8 @@
       gap: 8px;
     }
 
-    .brand-title {
-      font-weight: 700;
-      font-size: 16px;
-      color: #fff;
-    }
-
-    .top-meta {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 12px;
-      color: var(--muted);
-    }
+    .brand-title { font-weight: 700; font-size: 16px; color: #fff; }
+    .top-meta { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--muted); }
 
     .sub-nav {
       background: var(--panel-bg);
@@ -81,16 +71,9 @@
       white-space: nowrap;
     }
 
-    .nav-tab.active {
-      color: #60a5fa;
-      border-bottom-color: #3b82f6;
-    }
+    .nav-tab.active { color: #60a5fa; border-bottom-color: #3b82f6; }
 
-    .wrap {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 14px;
-    }
+    .wrap { max-width: 1200px; margin: 0 auto; padding: 14px; }
 
     .server-switcher {
       background: var(--panel-bg);
@@ -113,7 +96,7 @@
       justify-content: flex-end;
     }
 
-    button, input, select, textarea { font-family: inherit; }
+    button, input, select { font-family: inherit; }
 
     button {
       border: none;
@@ -134,7 +117,7 @@
     button.red:hover { background: var(--red-hover); }
     button.sm { padding: 6px 11px; font-size: 12px; }
 
-    input, select, textarea {
+    input, select {
       background: #0f172a;
       color: var(--text);
       border: 1px solid var(--border);
@@ -158,12 +141,7 @@
       text-align: left;
     }
 
-    .console-cmd {
-      margin-top: 8px;
-      display: flex;
-      gap: 8px;
-      direction: ltr;
-    }
+    .console-cmd { margin-top: 8px; display: flex; gap: 8px; direction: ltr; }
 
     .stats-grid {
       display: grid;
@@ -197,13 +175,7 @@
       margin-bottom: 10px;
     }
 
-    .breadcrumb {
-      font-size: 13px;
-      color: var(--muted);
-      direction: ltr;
-      text-align: left;
-    }
-
+    .breadcrumb { font-size: 13px; color: var(--muted); direction: ltr; text-align: left; }
     .breadcrumb span { color: #e2e8f0; font-weight: 600; }
 
     .file-list {
@@ -241,18 +213,8 @@
       padding-left: 8px;
     }
 
-    .file-name {
-      font-size: 13.5px;
-      font-weight: 500;
-      color: #f8fafc;
-      word-break: break-all;
-    }
-
-    .file-size {
-      font-size: 12px;
-      color: var(--muted);
-      white-space: nowrap;
-    }
+    .file-name { font-size: 13.5px; font-weight: 500; color: #f8fafc; word-break: break-all; }
+    .file-size { font-size: 12px; color: var(--muted); white-space: nowrap; }
 
     .dots-btn {
       background: transparent;
@@ -302,22 +264,21 @@
       color: #cbd5e1;
       direction: ltr;
       text-align: left;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
     }
 
-    .code-editor {
+    #aceEditorBox {
       width: 100%;
-      min-height: 360px;
-      background: var(--editor-bg);
-      color: #e2e8f0;
+      height: 420px;
       border: 1px solid var(--border);
       border-radius: 8px;
-      padding: 12px;
-      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-      font-size: 13px;
-      line-height: 1.55;
       direction: ltr;
       text-align: left;
-      resize: vertical;
+      font-size: 13px;
     }
 
     .editor-actions {
@@ -448,8 +409,11 @@
       </div>
 
       <div id="fileEditorView" class="hidden">
-        <div id="editorFilePath" class="editor-path">/home / container / index.js</div>
-        <textarea id="codeEditorArea" class="code-editor" spellcheck="false" placeholder="اكتب الكود هنا..."></textarea>
+        <div class="editor-path">
+          <span id="editorFilePath">/home / container / index.js</span>
+          <span id="editorSyntaxBadge" style="font-size:11.5px; color:#94a3b8;">javascript</span>
+        </div>
+        <div id="aceEditorBox"></div>
         <div class="editor-actions">
           <button onclick="saveOpenedFile()">حفظ</button>
           <button class="gray" onclick="backToFilesHome()">الرجوع</button>
@@ -502,6 +466,36 @@
     let openedFileName = null;
     let openMenuFile = null;
     let uptimeSec = 0;
+
+    // تهيئة محرر Ace بنفس أسلوب وتلوين Pterodactyl / Karlo
+    const codeEditor = ace.edit('aceEditorBox');
+    codeEditor.setTheme('ace/theme/tomorrow_night');
+    codeEditor.setShowPrintMargin(false);
+    codeEditor.setOptions({
+      fontSize: '13px',
+      tabSize: 2,
+      useSoftTabs: true,
+      wrap: false,
+      enableBasicAutocompletion: true,
+      useWorker: true
+    });
+
+    function detectEditorMode(fileName) {
+      const lower = String(fileName || '').toLowerCase();
+      if (lower.endsWith('.js') || lower.endsWith('.cjs') || lower.endsWith('.mjs')) return 'ace/mode/javascript';
+      if (lower.endsWith('.json')) return 'ace/mode/json';
+      if (lower.endsWith('.html')) return 'ace/mode/html';
+      if (lower.endsWith('.css')) return 'ace/mode/css';
+      if (lower.endsWith('.md')) return 'ace/mode/markdown';
+      if (lower.endsWith('.py')) return 'ace/mode/python';
+      if (lower.endsWith('.sh') || lower.endsWith('.env')) return 'ace/mode/sh';
+      if (lower.endsWith('.yml') || lower.endsWith('.yaml')) return 'ace/mode/yaml';
+      if (typeof ace.require === 'function') {
+        const modelist = ace.require('ace/ext/modelist');
+        if (modelist) return modelist.getModeForPath(fileName).mode;
+      }
+      return 'ace/mode/text';
+    }
 
     setInterval(() => {
       const st = document.getElementById('statStatus').textContent;
@@ -778,23 +772,29 @@
       renderFileList();
       openedFileName = fileName;
 
+      const mode = detectEditorMode(fileName);
+      codeEditor.session.setMode(mode);
+      document.getElementById('editorSyntaxBadge').textContent = mode.replace('ace/mode/', '');
       document.getElementById('editorFilePath').textContent = `/home / container / ${fileName}`;
-      document.getElementById('codeEditorArea').value = 'جاري تحميل الملف...';
       document.getElementById('editorMsg').textContent = '';
+
+      codeEditor.setValue('// جاري تحميل الملف...', -1);
 
       document.getElementById('filesBrowserView').classList.add('hidden');
       document.getElementById('fileEditorView').classList.remove('hidden');
+      codeEditor.resize();
 
       const res = await api(`/api/servers/${activeServerId}/files/content?name=${encodeURIComponent(fileName)}`);
       if (!res) return;
       const data = await res.json();
-      document.getElementById('codeEditorArea').value = res.ok ? (data.content || '') : '';
+      codeEditor.setValue(res.ok ? (data.content || '') : '', -1);
+      codeEditor.resize();
       if (!res.ok) document.getElementById('editorMsg').textContent = data.error || 'ملف جديد';
     }
 
     async function saveOpenedFile() {
       if (!activeServerId || !openedFileName) return;
-      const content = document.getElementById('codeEditorArea').value;
+      const content = codeEditor.getValue();
       const msg = document.getElementById('editorMsg');
       msg.textContent = 'جاري الحفظ...';
 
