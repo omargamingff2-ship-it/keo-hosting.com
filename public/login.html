@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>تسجيل الدخول - استضافة البوتات</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+    body {
+      background: #0b0f17;
+      color: #f3f4f6;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .card {
+      width: 100%;
+      max-width: 390px;
+      background: #121826;
+      border: 1px solid #1f2937;
+      border-radius: 14px;
+      padding: 28px 22px;
+      box-shadow: 0 18px 40px rgba(0,0,0,0.45);
+    }
+    h1 { font-size: 20px; margin-bottom: 6px; text-align: center; }
+    p { font-size: 13px; color: #9ca3af; text-align: center; margin-bottom: 22px; }
+    .field { margin-bottom: 14px; }
+    label { display: block; font-size: 13px; color: #d1d5db; margin-bottom: 6px; }
+    input {
+      width: 100%;
+      padding: 11px 12px;
+      border-radius: 8px;
+      border: 1px solid #263244;
+      background: #0b0f17;
+      color: #fff;
+      font-size: 14px;
+      outline: none;
+    }
+    input:focus { border-color: #3b82f6; }
+    button {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      background: #2563eb;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 6px;
+    }
+    button:hover { background: #1d4ed8; }
+    .err {
+      margin-top: 12px;
+      font-size: 13px;
+      color: #f87171;
+      text-align: center;
+      min-height: 18px;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>لوحة استضافة البوتات</h1>
+    <p>أدخل اسم المستخدم وكلمة السر للوصول</p>
+    <form id="loginForm">
+      <div class="field">
+        <label>اسم المستخدم</label>
+        <input type="text" id="username" required autocomplete="username" />
+      </div>
+      <div class="field">
+        <label>كلمة السر</label>
+        <input type="password" id="password" required autocomplete="current-password" />
+      </div>
+      <button type="submit">دخول</button>
+      <div class="err" id="errMsg"></div>
+    </form>
+  </div>
+
+  <script>
+    document.addEventListener('contextmenu', (e) => e.preventDefault());
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && ['I', 'J', 'C'].includes(e.key.toUpperCase()))) {
+        e.preventDefault();
+      }
+    });
+
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const errEl = document.getElementById('errMsg');
+      errEl.textContent = '';
+
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+
+      const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        errEl.textContent = data.error || 'فشل تسجيل الدخول';
+        return;
+      }
+      window.location.href = '/dashboard';
+    });
+  </script>
+</body>
+</html>
