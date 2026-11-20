@@ -194,7 +194,6 @@
     .stat-label { font-size: 11.5px; color: #cbd5e1; }
     .stat-val { font-size: 14px; font-weight: 700; color: #fff; margin-top: 2px; }
 
-    /* Files Manager */
     .files-toolbar {
       display: flex;
       flex-wrap: wrap;
@@ -311,7 +310,6 @@
       color: #f87171;
     }
 
-    /* File Editor View */
     .editor-path {
       background: var(--panel-bg);
       border: 1px solid var(--border);
@@ -392,7 +390,7 @@
     <div class="server-switcher">
       <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; flex:1;">
         <select id="serverSelect" onchange="onServerChange()" style="max-width:260px;"></select>
-        <button class="gray sm" id="toggleAllBtn" class="hidden" onclick="toggleAllServers()">عرض الكل</button>
+        <button class="gray sm hidden" id="toggleAllBtn" onclick="toggleAllServers()">عرض الكل</button>
       </div>
       <form id="createServerForm" style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
         <input type="text" id="newServerName" placeholder="اسم سيرفر جديد..." style="width:165px;" required />
@@ -402,7 +400,6 @@
     </div>
     <div id="createServerMsg" class="msg" style="margin-bottom:8px;"></div>
 
-    <!-- Console Section -->
     <section id="sec-console">
       <div class="power-bar">
         <button class="sm" onclick="powerAction('start')">Start</button>
@@ -463,7 +460,6 @@
       </div>
     </section>
 
-    <!-- Files Section -->
     <section id="sec-files" class="hidden">
       <div id="filesBrowserView">
         <div class="files-toolbar">
@@ -490,7 +486,6 @@
       </div>
     </section>
 
-    <!-- Users Section (Owner) -->
     <section id="sec-users" class="hidden">
       <div class="panel-card">
         <h3 style="margin:0 0 10px;">إضافة عضو جديد</h3>
@@ -669,12 +664,27 @@
       if (data.server?._id) selectServer(data.server._id);
     });
 
+    function appendConsoleLine(text) {
+      const out = document.getElementById('consoleOutput');
+      out.textContent += text;
+      out.scrollTop = out.scrollHeight;
+    }
+
     async function powerAction(action) {
-      if (!activeServerId) return;
-      await api(`/api/servers/${activeServerId}/power`, {
+      if (!activeServerId) {
+        appendConsoleLine('[SYSTEM] اختر سيرفراً أولاً.\n');
+        return;
+      }
+      appendConsoleLine(`[SYSTEM] إرسال أمر ${action}...\n`);
+      const res = await api(`/api/servers/${activeServerId}/power`, {
         method: 'POST',
         body: JSON.stringify({ action })
       });
+      if (!res) return;
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        appendConsoleLine(`[ERROR] ${data.error || 'فشل تنفيذ الأمر'}\n`);
+      }
       await loadServers();
     }
 
@@ -689,9 +699,12 @@
 
     socket.on('console_output', ({ serverId, line }) => {
       if (serverId !== activeServerId) return;
-      const out = document.getElementById('consoleOutput');
-      out.textContent += line;
-      out.scrollTop = out.scrollHeight;
+      appendConsoleLine(line);
+    });
+
+    socket.on('console_log', ({ serverId, line }) => {
+      if (serverId !== activeServerId) return;
+      appendConsoleLine(line);
     });
 
     socket.on('server_status', async ({ serverId }) => {
@@ -729,7 +742,7 @@
 
       box.innerHTML = currentFiles.map(f => {
         const name = f.fileName || f.name;
-        const size = f.size ?? BufferSizeFallback(f.content);
+        const size = f.sizeBytes ?? f.size ?? BufferSizeFallback(f.content);
         const isOpenMenu = openMenuFile === name;
         return `
           <div class="file-row">
