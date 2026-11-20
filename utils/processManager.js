@@ -40,9 +40,19 @@ async function syncFilesToDisk(serverId) {
 }
 
 function emitLog(io, serverId, line) {
-  io.to(`server_${serverId}`).emit('console_log', {
+  const payload = {
     serverId: String(serverId),
-    line: String(line)
+    line: String(line).endsWith('\n') ? String(line) : `${String(line)}\n`
+  };
+  io.to(`server_${serverId}`).emit('console_output', payload);
+  io.to(`server_${serverId}`).emit('console_log', payload);
+}
+
+async function emitStatus(io, serverId, status) {
+  await Server.findByIdAndUpdate(serverId, { status }).catch(() => {});
+  io.to(`server_${serverId}`).emit('server_status', {
+    serverId: String(serverId),
+    status
   });
 }
 
@@ -53,14 +63,16 @@ async function startBotServer(serverDoc, io) {
     return;
   }
 
+  await emitStatus(io, serverDoc._id, 'starting');
   await syncFilesToDisk(serverDoc._id);
+
   const dir = getServerDir(serverDoc._id);
   const startup = safeFileName(serverDoc.startupFile || 'index.js');
   const entryPath = path.join(dir, startup);
 
   if (!fs.existsSync(entryPath)) {
     emitLog(io, id, `[ERROR] ملف التشغيل (${startup}) غير موجود في ملفات السيرفر.`);
-    await Server.findByIdAndUpdate(serverDoc._id, { status: 'offline' });
+    await emitStatus(io, serverDoc._id, 'offline');
     return;
   }
 
@@ -92,7 +104,7 @@ async function startBotServer(serverDoc, io) {
   });
 
   runningProcesses.set(id, child);
-  await Server.findByIdAndUpdate(serverDoc._id, { status: 'running' });
+  await emitStatus(io, serverDoc._id, 'running');
 
   child.stdout.on('data', (data) => emitLog(io, id, data.toString()));
   child.stderr.on('data', (data) => emitLog(io, id, `[STDERR] ${data.toString()}`));
@@ -100,7 +112,7 @@ async function startBotServer(serverDoc, io) {
   child.on('close', async (code) => {
     runningProcesses.delete(id);
     emitLog(io, id, `[SYSTEM] توقف البوت (Code: ${code ?? 0}).`);
-    await Server.findByIdAndUpdate(serverDoc._id, { status: 'offline' }).catch(() => {});
+    await emitStatus(io, serverDoc._id, 'offline');
   });
 }
 
@@ -112,7 +124,7 @@ async function stopBotServer(serverId, io) {
     child.kill('SIGTERM');
     runningProcesses.delete(id);
   }
-  await Server.findByIdAndUpdate(serverId, { status: 'offline' });
+  await emitStatus(io, serverId, 'offline');
   emitLog(io, id, '[SYSTEM] تم إيقاف السيرفر.');
 }
 
