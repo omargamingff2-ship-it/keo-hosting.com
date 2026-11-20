@@ -10,11 +10,15 @@ if (!fs.existsSync(RUNTIME_ROOT)) {
 }
 
 const runningProcesses = new Map();
+const startTimes = new Map();
 
 function safeFileName(name) {
-  const cleaned = String(name || '').replace(/\\/g, '/').replace(/^\/+/, '');
-  if (!cleaned || cleaned.includes('..')) {
-    throw new Error('اسم الملف غير صالح');
+  const cleaned = String(name || '')
+    .replace(/\\/g, '/')
+    .replace(/^\/+/, '')
+    .replace(/\/+/g, '/');
+  if (!cleaned || cleaned === '.' || cleaned === '..' || cleaned.split('/').includes('..')) {
+    throw new Error('اسم الملف أو المسار غير صالح');
   }
   return cleaned;
 }
@@ -40,26 +44,30 @@ async function syncFilesToDisk(serverId) {
 }
 
 function emitLog(io, serverId, line) {
-  const payload = {
+  const formatted = String(line).endsWith('\n') ? String(line) : `${String(line)}\n`;
+  io.to(`server_${serverId}`).emit('console_output', {
     serverId: String(serverId),
-    line: String(line).endsWith('\n') ? String(line) : `${String(line)}\n`
-  };
-  io.to(`server_${serverId}`).emit('console_output', payload);
-  io.to(`server_${serverId}`).emit('console_log', payload);
+    line: formatted
+  });
+  io.to(`server_${serverId}`).emit('console_log', {
+    serverId: String(serverId),
+    line: formatted
+  });
 }
 
 async function emitStatus(io, serverId, status) {
   await Server.findByIdAndUpdate(serverId, { status }).catch(() => {});
   io.to(`server_${serverId}`).emit('server_status', {
     serverId: String(serverId),
-    status
+    status,
+    startedAt: startTimes.get(String(serverId)) || null
   });
 }
 
 async function startBotServer(serverDoc, io) {
   const id = String(serverDoc._id);
   if (runningProcesses.has(id)) {
-    emitLog(io, id, '[SYSTEM] السيرفر يعمل بالفعل.');
+    emitLog(io, id, '[KEO SYSTEM] السيرفر يعمل بالفعل.');
     return;
   }
 
@@ -71,7 +79,7 @@ async function startBotServer(serverDoc, io) {
   const entryPath = path.join(dir, startup);
 
   if (!fs.existsSync(entryPath)) {
-    emitLog(io, id, `[ERROR] ملف التشغيل (${startup}) غير موجود في ملفات السيرفر.`);
+    emitLog(io, id, `[KEO ERROR] ملف التشغيل (${startup}) غير موجود في ملفات السيرفر.`);
     await emitStatus(io, serverDoc._id, 'offline');
     return;
   }
@@ -80,7 +88,7 @@ async function startBotServer(serverDoc, io) {
   const nodeModulesPath = path.join(dir, 'node_modules');
 
   if (fs.existsSync(pkgPath) && !fs.existsSync(nodeModulesPath)) {
-    emitLog(io, id, '[SYSTEM] جاري تثبيت مكتبات package.json لأول مرة...');
+    emitLog(io, id, '[KEO SYSTEM] جاري تثبيت مكتبات package.json لأول مرة...');
     await new Promise((resolve) => {
       const npmProc = spawn('npm', ['install', '--no-audit', '--no-fund'], {
         cwd: dir,
@@ -92,14 +100,16 @@ async function startBotServer(serverDoc, io) {
     });
   }
 
-  emitLog(io, id, `[SYSTEM] تشغيل البوت عبر ${startup} ...`);
+  startTimes.set(id, Date.now());
+  emitLog(io, id, `[KEO SYSTEM] تشغيل البوت عبر ${startup} ...`);
+
   const child = spawn('node', [startup], {
     cwd: dir,
     env: {
       ...process.env,
       NODE_ENV: 'production',
-      BOT_CPU_LIMIT: String(serverDoc.cpuLimit),
-      BOT_RAM_LIMIT_MB: String(serverDoc.storageLimitMB)
+      BOT_CPU_LIMIT: String(serverDoc.cpuLimit || 150),
+      BOT_RAM_LIMIT_MB: String(serverDoc.storageLimitMB || 5120)
     }
   });
 
@@ -111,7 +121,8 @@ async function startBotServer(serverDoc, io) {
 
   child.on('close', async (code) => {
     runningProcesses.delete(id);
-    emitLog(io, id, `[SYSTEM] توقف البوت (Code: ${code ?? 0}).`);
+    startTimes.delete(id);
+    emitLog(io, id, `[KEO SYSTEM] توقف البوت (Code: ${code ?? 0}).`);
     await emitStatus(io, serverDoc._id, 'offline');
   });
 }
@@ -120,28 +131,38 @@ async function stopBotServer(serverId, io) {
   const id = String(serverId);
   const child = runningProcesses.get(id);
   if (child) {
-    emitLog(io, id, '[SYSTEM] جاري إيقاف البوت...');
+    emitLog(io, id, '[KEO SYSTEM] جاري إيقاف البوت...');
     child.kill('SIGTERM');
     runningProcesses.delete(id);
   }
+  startTimes.delete(id);
   await emitStatus(io, serverId, 'offline');
-  emitLog(io, id, '[SYSTEM] تم إيقاف السيرفر.');
+  emitLog(io, id, '[KEO SYSTEM] تم إيقاف السيرفر.');
 }
 
 function sendConsoleInput(serverId, command, io) {
   const id = String(serverId);
   const child = runningProcesses.get(id);
   if (!child || !child.stdin.writable) {
-    emitLog(io, id, '[SYSTEM] البوت متوقف حالياً ولا يقبل أوامر الكونسول.');
+    emitLog(io, id, '[KEO SYSTEM] البوت متوقف حالياً ولا يقبل أوامر الكونسول.');
     return;
   }
   child.stdin.write(`${command}\n`);
   emitLog(io, id, `> ${command}`);
 }
 
+function getRuntimeInfo(serverId) {
+  const id = String(serverId);
+  const isRunning = runningProcesses.has(id);
+  const startedAt = startTimes.get(id) || null;
+  const uptimeSec = isRunning && startedAt ? Math.floor((Date.now() - startedAt) / 1000) : 0;
+  return { isRunning, uptimeSec };
+}
+
 module.exports = {
   safeFileName,
   startBotServer,
   stopBotServer,
-  sendConsoleInput
+  sendConsoleInput,
+  getRuntimeInfo
 };
